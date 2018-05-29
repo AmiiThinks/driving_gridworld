@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='road_gridworld',
+    name='driving_gridworld',
     version='0.0.1',
     license='',
     packages=find_packages(),
