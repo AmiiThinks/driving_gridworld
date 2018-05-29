@@ -1,7 +1,7 @@
 PIP :=pip
 PYTHON :=python
-NAME :=road_gridworld
-LIB_NAME :=road_gridworld
+NAME :=driving_gridworld
+LIB_NAME :=driving_gridworld
 
 .PHONY: default
 default: install
