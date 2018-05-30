@@ -18,6 +18,10 @@ test-cov: test
 install: requirements.txt
 	$(PIP) install -r requirements.txt $(ARGS)
 
+.PHONY: install-dev
+install-dev: requirements.txt
+	$(PIP) install -r requirements.txt -e . $(ARGS)
+
 .PHONY: clean
 clean:
 	-find . -name "*.pyc" -delete
