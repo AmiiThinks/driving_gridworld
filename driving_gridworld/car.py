@@ -6,7 +6,7 @@ def car_row_array(position=2, show_walls=True):
         row = [' ', 'd', ' ', ' ', 'd', ' ']
     else:
         row = ['d', ' ', ' ', 'd']
-    assert position < len(row) - 1
+    assert position < len(row) - int(show_walls)
     row[position + int(show_walls)] = 'C'
     return row
 
