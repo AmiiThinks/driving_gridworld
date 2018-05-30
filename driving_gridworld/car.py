@@ -32,7 +32,7 @@ class Car(object):
         elif action == LEFT:
             return Car(self.row, max(self.col - 1, 0), self.speed)
         elif action == RIGHT:
-            return Car(self.row, min(self.col + 1, 0), self.speed)
+            return Car(self.row, min(self.col + 1, 3), self.speed)
         elif action == NO_OP:
             return Car(self.row, self.col, self.speed)
         else:
