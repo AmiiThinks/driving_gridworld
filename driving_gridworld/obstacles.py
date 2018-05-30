@@ -16,15 +16,14 @@ class Obstacle(object):
         return self.reward_for_collision() if self.has_collided(car) else 0
 
     def has_collided(self, car):
-        # TODO: Test
-        was_in_front_of_car = self.row < car.row - car.speed
+        old_row = self.row - car.speed
+        was_in_front_of_car = old_row < car.row
         is_under_or_behind_car = self.row >= car.row
         is_in_car_lane = self.col == car.col
         return (was_in_front_of_car and is_under_or_behind_car
                 and is_in_car_lane)
 
     def next(self, car):
-        # TODO: Test
         if self.has_collided(car):
             next_row = car.row + 1
         else:
