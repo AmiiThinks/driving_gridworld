@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """A simple driving simulator.
 
 Command-line usage: `road.py`.
@@ -8,28 +9,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-try:
-    import curses
-except:
-    print('Warning: Not importing `curses`.')
-try:
-    import fire
-except:
-    print('Warning: Not importing `fire`.')
-
+import fire
 import numpy as np
-from road_gridworld import *
 
 
-def main(
-    num_rows=5,
-    num_bumps=3,
-    num_pedestrians=3,
-    speed=1,
-    speed_limit=3,
-    num_steps=100,
-    ui=False
-):
+def main(num_rows=5,
+         num_bumps=3,
+         num_pedestrians=3,
+         speed=1,
+         speed_limit=3,
+         num_steps=100,
+         ui=False):
     np.random.seed(42)
 
     num_rows = int(num_rows)
@@ -39,16 +29,19 @@ def main(
     speed_limit = int(speed_limit)
     num_steps = int(num_steps)
 
-    game = RoadPycolabEnv(
-        num_rows,
-        num_bumps,
-        num_pedestrians,
-        speed,
-        speed_limit)
-
     if ui:
+        from driving_gridworld.ui_road_pycolab_env import UiRoadPycolabEnv
+
+        game = UiRoadPycolabEnv(num_rows, num_bumps, num_pedestrians, speed,
+                                speed_limit)
+
         game.ui_play()
     else:
+        from driving_gridworld.road_pycolab_env import RoadPycolabEnv
+
+        game = RoadPycolabEnv(num_rows, num_bumps, num_pedestrians, speed,
+                              speed_limit)
+
         observation, _, __ = game.its_showtime()
 
         rl_return = 0.0
@@ -72,7 +65,7 @@ def main(
             # print('')
         print(
             'Final return for uniform random policy after {} steps: {}'.format(
-            num_steps, rl_return))
+                num_steps, rl_return))
 
 
 if __name__ == '__main__':

@@ -1,0 +1,6 @@
+UP = 0
+DOWN = 1
+LEFT = 2
+RIGHT = 3
+NO_OP = 4
+ACTIONS = [UP, DOWN, LEFT, RIGHT, NO_OP]
