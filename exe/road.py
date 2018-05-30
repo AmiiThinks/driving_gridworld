@@ -28,6 +28,7 @@ def main(num_rows=5,
     speed = int(speed)
     speed_limit = int(speed_limit)
     num_steps = int(num_steps)
+    ui = bool(ui)
 
     if ui:
         from driving_gridworld.ui_road_pycolab_env import UiRoadPycolabEnv
