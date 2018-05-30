@@ -9,11 +9,11 @@ class Obstacle(object):
     def prob_of_appearing(self):
         raise 'Abstract.'
 
-    def reward_for_collision(self):
+    def reward_for_collision(self, car):
         raise 'Abstract'
 
     def reward(self, car):
-        return self.reward_for_collision() if self.has_collided(car) else 0
+        return self.reward_for_collision(car) if self.has_collided(car) else 0
 
     def has_collided(self, car):
         old_row = self.row - car.speed
