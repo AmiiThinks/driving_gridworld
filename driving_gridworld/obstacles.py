@@ -2,7 +2,7 @@ class Obstacle(object):
     def __init__(self, row, col):
         self.row = row
         self.col = col
-
+    
     def position(self):
         return (self.row, self.col)
 

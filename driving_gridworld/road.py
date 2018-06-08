@@ -161,10 +161,7 @@ class Road(object):
     def obstacle_visible(self, obstacle):
         return 0 <= obstacle.row < self._num_rows
 
-    def successors(self, action):
-        '''Generates successor, probability, reward tuples.'''
-        next_car = self._car.next(action, self._speed_limit)
-
+    def every_combination_of_revealed_obstacles(self):
         hidden_obstacle_indices = [
             i for i in range(len(self._obstacles))
             if not self.obstacle_visible(self._obstacles[i])
@@ -186,26 +183,37 @@ class Road(object):
             for positions, reveal_indices in product(
                     position_sets, sets_of_obstacle_indices_to_reveal):
                 assert len(positions) == len(reveal_indices)
+                yield positions, reveal_indices
 
-                prob = 1.0
-                j = 0
-                next_obstacles = []
-                reward = 0.0
-                for i in range(len(self._obstacles)):
-                    obs = self._obstacles[i]
-                    p = obs.prob_of_appearing()
-                    assert p <= 1
-                    if i in reveal_indices:
-                        next_obstacles.append(obs.__class__(*positions[j]))
-                        prob *= p / float(len(self._available_spaces) - j)
-                        j += 1
-                    else:
-                        next_obstacles.append(obs.next(self._car))
-                        if j < len(self._available_spaces):
-                            prob *= 1.0 - p
-                    reward += next_obstacles[-1].reward(self._car)
-                yield (self.__class__(self._num_rows, next_car, next_obstacles,
-                                      self._speed_limit), prob, reward)
+    def successors(self, action):
+        '''Generates successor, probability, reward tuples.'''
+        next_car = self._car.next(action, self._speed_limit)
+
+        for positions, reveal_indices in (
+            self.every_combination_of_revealed_obstacles()
+        ):
+            prob = 1.0
+            j = 0
+            next_obstacles = []
+            reward = 0.0
+            for i in range(len(self._obstacles)):
+                obs = self._obstacles[i]
+                p = obs.prob_of_appearing()
+                assert p <= 1
+                if i in reveal_indices:
+                    next_obstacles.append(obs.__class__(*positions[j]))
+                    prob *= p / float(len(self._available_spaces) - j)
+                    j += 1
+                else:
+                    next_obstacles.append(obs.next(self._car))
+                    obstacle_could_have_appeared = (
+                        not self.obstacle_visible(obs) and
+                        j < len(self._available_spaces))
+                    if obstacle_could_have_appeared:
+                        prob *= 1.0 - p
+                reward += next_obstacles[-1].reward(self._car)
+            yield (self.__class__(self._num_rows, next_car, next_obstacles,
+                                  self._speed_limit), prob, reward)
 
     def to_key(self, show_walls=False):
         return (self.to_s(show_walls=show_walls), self._car.speed)
