@@ -143,13 +143,15 @@ def combinations(iterable, r, collection=tuple):
 
 class Road(object):
     def __init__(self, num_rows, car, obstacles, speed_limit):
+        if speed_limit < car.speed:
+            raise ValueError("Car's speed above speed limit!")
         self._num_rows = num_rows
         self._num_columns = 4
         self._car = car
         self._speed_limit = speed_limit
         self._obstacles = obstacles
-
         self._available_spaces = {}
+
         for pos in product(range(0, self._car.speed), range(4)):
             self._available_spaces[pos] = True
         for obs in self._obstacles:
@@ -215,13 +217,14 @@ class Road(object):
                     num_avail_spaces_given_revealed_obs = (
                         len(self._available_spaces) - num_obstacles_revealed)
                     prob *= p / float(num_avail_spaces_given_revealed_obs)
-                    num_obstacles_revealed += 1
                 else:
                     next_obstacle = obs.next(self._car)
                     prob *= 1.0 - p
                 next_obstacles.append(next_obstacle)
                 reward += next_obstacle.reward(self._car)
             reward += self._car.reward()
+            if self._car.col == 0 or self._car.col == 3:
+                reward += -4 * self._car.speed
             next_road = self.__class__(self._num_rows, next_car,
                                        next_obstacles, self._speed_limit)
             yield (next_road, prob, reward)
