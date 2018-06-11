@@ -44,3 +44,24 @@ def test_transition_probs_with_one_obstacle_are_1(obst, action):
         for next_state, prob, reward in road_test.successors(action)
     ]
     assert probs == [1.0]
+
+
+@pytest.mark.parametrize("obst", [Bump(-1, -1), Pedestrian(0, -1)])
+@pytest.mark.parametrize("action", ACTIONS)
+def test_transition_probs_with_invisible_obstacle(obst, action):
+    num_rows = 2
+    speed_limit = 1
+
+    road_test = Road(num_rows, Car(1, 1, 1), [obst], speed_limit)
+    probs = [
+        prob
+        for next_state, prob, reward in road_test.successors(action)
+    ]
+    assert len(probs) == 5
+    sum_probs = 0.0
+    for i in range(len(probs)):
+        assert 0.0 <= probs[i] <= 1.0
+        sum_probs += probs[i]
+    assert sum_probs == pytest.approx(1.0)
+    assert probs[0] == max(probs)
+    assert probs[1:] == [obst.prob_of_appearing() / 4] * 4
