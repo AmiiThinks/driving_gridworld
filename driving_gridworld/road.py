@@ -153,18 +153,19 @@ class Road(object):
         for pos in product(range(0, self._car.speed), range(4)):
             self._available_spaces[pos] = True
         for obs in self._obstacles:
-            if self.obstacle_visible(obs):
+            if not self.obstacle_outside_car_path(obs):
                 disallowed_position = obs.position()
                 if disallowed_position in self._available_spaces:
                     del self._available_spaces[disallowed_position]
 
-    def obstacle_visible(self, obstacle):
-        return 0 <= obstacle.row < self._num_rows
+    def obstacle_outside_car_path(self, obstacle):
+        return (obstacle.col < 0 or obstacle.col >= self._num_columns
+                or obstacle.row >= self._num_rows)
 
     def every_combination_of_revealed_obstacles(self):
         hidden_obstacle_indices = [
             i for i in range(len(self._obstacles))
-            if not self.obstacle_visible(self._obstacles[i])
+            if self.obstacle_outside_car_path(self._obstacles[i])
         ]
         max_num_revealed_obstacles = min(
             len(hidden_obstacle_indices), len(self._available_spaces))
@@ -199,8 +200,7 @@ class Road(object):
         next_car = self._car.next(action, self._speed_limit)
 
         for positions, reveal_indices in (
-            self.every_combination_of_revealed_obstacles()
-        ):
+                self.every_combination_of_revealed_obstacles()):
             prob = 1.0
             num_obstacles_revealed = 0
             next_obstacles = []
@@ -221,8 +221,8 @@ class Road(object):
                     prob *= 1.0 - p
                 next_obstacles.append(next_obstacle)
                 reward += next_obstacle.reward(self._car)
-            next_road = self.__class__(
-                self._num_rows, next_car, next_obstacles, self._speed_limit)
+            next_road = self.__class__(self._num_rows, next_car,
+                                       next_obstacles, self._speed_limit)
             yield (next_road, prob, reward)
 
     def to_key(self, show_walls=False):
@@ -245,9 +245,9 @@ class Road(object):
             show_walls=show_walls)
 
     def prob_obstacle_appears(self, obstacle, num_obstacles_revealed):
-        if self.obstacle_visible(obstacle):
-            return 0
-        else:
-            space_is_available = (
-                num_obstacles_revealed < len(self._available_spaces))
+        if self.obstacle_outside_car_path(obstacle):
+            space_is_available = (num_obstacles_revealed < len(
+                self._available_spaces))
             return obstacle.prob_of_appearing() * int(space_is_available)
+        else:
+            return 0
