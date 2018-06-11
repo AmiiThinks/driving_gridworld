@@ -37,3 +37,6 @@ class Car(object):
             return Car(self.row, self.col, self.speed)
         else:
             raise 'Unrecognized action, "{}".'.format(action)
+
+    def reward(self):
+        return float(self.speed)
