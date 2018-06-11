@@ -65,3 +65,22 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
     assert sum_probs == pytest.approx(1.0)
     assert probs[0] == max(probs)
     assert probs[1:] == [obst.prob_of_appearing() / 4] * 4
+
+@pytest.mark.parametrize("action", ACTIONS)
+def test_positive_reward_drive_faster_no_collision(action):
+    num_rows = 4
+    obstacles = []
+    speed_limit = 1
+    current_speed = 2
+    car = Car(0, 0, current_speed)
+    road_test = Road(num_rows, car, obstacles, speed_limit)
+    for next_state, prob, reward in road_test.successors(action):
+        assert reward == float(current_speed)
+
+@pytest.mark.skip(reason="not yet implemented")
+def test_speed_limit_below_current_speed():
+    pass
+
+@pytest.mark.skip(reason="not yet implemented")
+def test_reward_drive_in_the_ditch():
+    pass

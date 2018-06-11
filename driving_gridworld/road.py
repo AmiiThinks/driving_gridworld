@@ -221,6 +221,7 @@ class Road(object):
                     prob *= 1.0 - p
                 next_obstacles.append(next_obstacle)
                 reward += next_obstacle.reward(self._car)
+            reward += self._car.reward()
             next_road = self.__class__(self._num_rows, next_car,
                                        next_obstacles, self._speed_limit)
             yield (next_road, prob, reward)
