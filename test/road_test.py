@@ -99,3 +99,16 @@ def test_receive_negative_reward_for_driving_off_the_road(car, action):
     road_test = Road(num_rows, car, obstacles, speed_limit)
     for next_state, prob, reward in road_test.successors(action):
         assert reward < 0
+@pytest.mark.parametrize("obst", [Bump(-1, -1), Pedestrian(0, -1)])
+@pytest.mark.parametrize("action", ACTIONS)
+@pytest.mark.parametrize("speed", [1, 2, 3])
+def test_number_of_successors_invisible_obstacle_and_variable_speeds(
+    obst, action, speed):
+    num_rows = 2
+    speed_limit = 3
+    road_test = Road(num_rows, Car(1, 1, speed), [obst], speed_limit)
+    probs = [
+        prob
+        for next_state, prob, reward in road_test.successors(action)
+    ]
+    assert len(probs) == 4 * speed + 1
