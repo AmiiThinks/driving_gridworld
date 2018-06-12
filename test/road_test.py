@@ -92,7 +92,7 @@ def test_road_cannot_start_with_car_going_faster_than_speed_limit():
 
 @pytest.mark.parametrize("car", [Car(0, 0, 1), Car(0, 3, 1)])
 @pytest.mark.parametrize("action", ACTIONS)
-def test_reward_drive_in_the_ditch(car, action):
+def test_receive_negative_reward_for_driving_off_the_road(car, action):
     num_rows = 4
     obstacles = []
     speed_limit = 2
