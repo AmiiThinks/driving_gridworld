@@ -279,3 +279,9 @@ class Road(object):
         layer[:, 0] = True
         layer[:, -1] = True
         return layer
+
+    def ditch_layer(self):
+        layer = np.full([self._num_rows, 6], False)
+        layer[:, 1] = True
+        layer[:, -2] = True
+        return layer
