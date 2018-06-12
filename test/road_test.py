@@ -79,7 +79,7 @@ def test_positive_reward_drive_faster_no_collision(action):
         assert reward == float(current_speed)
 
 
-def test_speed_limit_below_current_speed():
+def test_road_cannot_start_with_car_going_faster_than_speed_limit():
     num_rows = 4
     obstacles = []
     speed_limit = 1
