@@ -31,16 +31,16 @@ def main(num_rows=5,
     ui = bool(ui)
 
     if ui:
-        from driving_gridworld.ui_road_pycolab_env import UiRoadPycolabEnv
+        from driving_gridworld.ui_road_pycolab_env import UiDrivingGridworld
 
-        game = UiRoadPycolabEnv(num_rows, num_bumps, num_pedestrians, speed,
+        game = UiDrivingGridworld(num_rows, num_bumps, num_pedestrians, speed,
                                 speed_limit)
 
         game.ui_play()
     else:
-        from driving_gridworld.road_pycolab_env import RoadPycolabEnv
+        from driving_gridworld.road_pycolab_env import DrivingGridworld
 
-        game = RoadPycolabEnv(num_rows, num_bumps, num_pedestrians, speed,
+        game = DrivingGridworld(num_rows, num_bumps, num_pedestrians, speed,
                               speed_limit)
 
         observation, _, __ = game.its_showtime()
