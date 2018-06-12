@@ -216,6 +216,7 @@ class Road(object):
                     num_avail_spaces_given_revealed_obs = (
                         len(self._available_spaces) - num_obstacles_revealed)
                     prob *= p / float(num_avail_spaces_given_revealed_obs)
+                    num_obstacles_revealed += 1
                 else:
                     next_obstacle = obs.next(self._car)
                     prob *= 1.0 - p
