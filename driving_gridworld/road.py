@@ -270,6 +270,12 @@ class Road(object):
             return 0
 
     def car_layer(self):
-        layer = np.full([2, 4], False)
-        layer[self._car.row, self._car.col] = True
+        layer = np.full([self._num_rows, 6], False)
+        layer[self._car.row, self._car.col + 1] = True
+        return layer
+
+    def wall_layer(self):
+        layer = np.full([self._num_rows, 6], False)
+        layer[:, 0] = True
+        layer[:, -1] = True
         return layer
