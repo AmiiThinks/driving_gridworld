@@ -200,7 +200,7 @@ class Road(object):
                    state. The reward function is deterministic.
         '''
 
-        next_car = self._car.next(action, self._speed_limit)
+        next_car = self._car.next(action, self.speed_limit())
 
         for positions, reveal_indices in (
                 self.every_combination_of_revealed_obstacles()):
@@ -227,8 +227,7 @@ class Road(object):
             reward += self._car.reward()
             if self._car.col == 0 or self._car.col == 3:
                 reward -= 4 * self._car.speed
-            next_road = self.__class__(self._num_rows, next_car,
-                                       next_obstacles, self._speed_limit)
+            next_road = self.__class__(self._num_rows, next_car, next_obstacles)
             yield (next_road, prob, reward)
 
     def to_key(self, show_walls=False):
