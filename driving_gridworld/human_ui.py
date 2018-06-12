@@ -7,8 +7,8 @@ Keys: left, right - move. up, down - speed up or down, respectively. q - quit.
 import curses
 from pycolab import human_ui
 
-from .actions import UP, DOWN, LEFT, RIGHT, NO_OP
-from .road_pycolab_env import RoadPycolabEnv
+from .actions import UP, DOWN, LEFT, RIGHT, NO_OP, QUIT, LIST_CONTROLS
+from .gridworld import DrivingGridworld
 
 
 def color256_to_1000(c):
@@ -27,7 +27,7 @@ COLOUR_FG = {
 COLOUR_BG = {}
 
 
-class UiRoadPycolabEnv(RoadPycolabEnv):
+class UiDrivingGridworld(DrivingGridworld):
     def ui_play(self):
         ui = human_ui.CursesUi(
             keys_to_actions={
@@ -36,13 +36,12 @@ class UiRoadPycolabEnv(RoadPycolabEnv):
                 curses.KEY_LEFT: LEFT,
                 curses.KEY_RIGHT: RIGHT,
                 -1: NO_OP,
-                'q': 5,
-                'Q': 5,
-                'l': 6,
-                'L': 6
+                'q': QUIT,
+                'Q': QUIT,
+                'l': LIST_CONTROLS,
+                'L': LIST_CONTROLS
             },
-            repainter=self._repainter,
             delay=1000,
             colour_fg=COLOUR_FG,
             colour_bg=COLOUR_BG)
-        return ui.play(self._game)
+        return ui.play(self)
