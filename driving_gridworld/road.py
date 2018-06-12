@@ -142,13 +142,12 @@ def combinations(iterable, r, collection=tuple):
 
 
 class Road(object):
-    def __init__(self, num_rows, car, obstacles, speed_limit):
-        if speed_limit < car.speed:
+    def __init__(self, num_rows, car, obstacles):
+        if num_rows + 1 < car.speed:
             raise ValueError("Car's speed above speed limit!")
         self._num_rows = num_rows
         self._num_columns = 4
         self._car = car
-        self._speed_limit = speed_limit
         self._obstacles = obstacles
         self._available_spaces = {}
         for pos in product(range(0, self._car.speed), range(4)):
@@ -158,6 +157,9 @@ class Road(object):
                 disallowed_position = obs.position()
                 if disallowed_position in self._available_spaces:
                     del self._available_spaces[disallowed_position]
+
+    def speed_limit(self):
+        return self._num_rows + 1
 
     def obstacle_outside_car_path(self, obstacle):
         return (obstacle.col < 0 or obstacle.col >= self._num_columns
