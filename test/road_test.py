@@ -9,9 +9,8 @@ import pytest
 def test_transition_probs_without_obstacles_are_always_1():
     num_rows = 4
     obstacles = []
-    speed_limit = 1
     car_inst = Car(0, 0, 1)
-    road_test = Road(num_rows, car_inst, obstacles, speed_limit)
+    road_test = Road(num_rows, car_inst, obstacles)
 
     for a in ACTIONS:
         for next_state, prob, reward in road_test.successors(a):
@@ -21,9 +20,7 @@ def test_transition_probs_without_obstacles_are_always_1():
 @pytest.mark.parametrize("obst", [Bump(0, 0), Pedestrian(0, 0)])
 def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_all_obstacles_already_on_road(obst):
     num_rows = 2
-    speed_limit = 1
-
-    road_test = Road(num_rows, Car(1, 1, 1), [obst], speed_limit)
+    road_test = Road(num_rows, Car(1, 1, 1), [obst])
     patient = [
         (positions, reveal_indices)
         for positions, reveal_indices in
@@ -36,9 +33,7 @@ def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_
 @pytest.mark.parametrize("action", ACTIONS)
 def test_transition_probs_with_one_obstacle_are_1(obst, action):
     num_rows = 2
-    speed_limit = 1
-
-    road_test = Road(num_rows, Car(1, 1, 1), [obst], speed_limit)
+    road_test = Road(num_rows, Car(1, 1, 1), [obst])
     probs = [
         prob
         for next_state, prob, reward in road_test.successors(action)
@@ -50,9 +45,7 @@ def test_transition_probs_with_one_obstacle_are_1(obst, action):
 @pytest.mark.parametrize("action", ACTIONS)
 def test_transition_probs_with_invisible_obstacle(obst, action):
     num_rows = 2
-    speed_limit = 1
-
-    road_test = Road(num_rows, Car(1, 1, 1), [obst], speed_limit)
+    road_test = Road(num_rows, Car(1, 1, 1), [obst])
     probs = [
         prob
         for next_state, prob, reward in road_test.successors(action)
@@ -72,9 +65,8 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
 def test_driving_faster_gives_a_larger_reward(action, current_speed):
     num_rows = 4
     obstacles = []
-    speed_limit = 4
     car = Car(0, 1, current_speed)
-    road_test = Road(num_rows, car, obstacles, speed_limit)
+    road_test = Road(num_rows, car, obstacles)
     for next_state, prob, reward in road_test.successors(action):
         assert reward == float(current_speed)
 
@@ -82,12 +74,10 @@ def test_driving_faster_gives_a_larger_reward(action, current_speed):
 def test_road_cannot_start_with_car_going_faster_than_speed_limit():
     num_rows = 4
     obstacles = []
-    speed_limit = 1
-    current_speed = 2
+    current_speed = 6
     car = Car(0, 0, current_speed)
-
     with pytest.raises(ValueError):
-        road_test = Road(num_rows, car, obstacles, speed_limit)
+        road_test = Road(num_rows, car, obstacles)
 
 
 @pytest.mark.parametrize("car", [Car(0, 0, 1), Car(0, 3, 1)])
@@ -95,20 +85,34 @@ def test_road_cannot_start_with_car_going_faster_than_speed_limit():
 def test_receive_negative_reward_for_driving_off_the_road(car, action):
     num_rows = 4
     obstacles = []
-    speed_limit = 2
-    road_test = Road(num_rows, car, obstacles, speed_limit)
+    road_test = Road(num_rows, car, obstacles)
     for next_state, prob, reward in road_test.successors(action):
         assert reward < 0
+
+
 @pytest.mark.parametrize("obst", [Bump(-1, -1), Pedestrian(0, -1)])
 @pytest.mark.parametrize("action", ACTIONS)
 @pytest.mark.parametrize("speed", [1, 2, 3])
 def test_number_of_successors_invisible_obstacle_and_variable_speeds(
     obst, action, speed):
     num_rows = 2
-    speed_limit = 3
-    road_test = Road(num_rows, Car(1, 1, speed), [obst], speed_limit)
+    road_test = Road(num_rows, Car(1, 1, speed), [obst])
     probs = [
         prob
         for next_state, prob, reward in road_test.successors(action)
     ]
     assert len(probs) == 4 * speed + 1
+
+
+def test_speed_limit_equals_number_of_rows_plus_one():
+    ''' Reason for this test: if the car drives faster than the number of rows,
+        it breaks the physical plausibility of the game.
+        The car can drive at a speed unit equal to the number of rows + 1,
+        so that we allow the unsafe policy to take place.
+        The latter will be useful for testing a robust policy.
+    '''
+    num_rows = 2
+    obstacles = []
+    car = Car(0, 0, 1)
+    road_test = Road(num_rows, car, obstacles)
+    assert road_test.speed_limit() == num_rows + 1
