@@ -143,6 +143,14 @@ def combinations(iterable, r, collection=tuple):
 
 class Road(object):
     def __init__(self, num_rows, car, obstacles):
+        ''' Sets the speed limit to be equal to the number of rows plus one.
+            The reason for this is explained as follows: if the car drives
+            faster than the number of rows, it breaks the physical plausibility
+            of the game.
+            By allowing the car to drive at a speed equal to the number of rows
+            plus one, we allow an unsafe policy to take place. This will be
+            useful for testing a robust policy.
+        '''
         if num_rows + 1 < car.speed:
             raise ValueError("Car's speed above speed limit!")
         self._num_rows = num_rows

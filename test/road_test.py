@@ -105,12 +105,6 @@ def test_number_of_successors_invisible_obstacle_and_variable_speeds(
 
 
 def test_speed_limit_equals_number_of_rows_plus_one():
-    ''' Reason for this test: if the car drives faster than the number of rows,
-        it breaks the physical plausibility of the game.
-        The car can drive at a speed unit equal to the number of rows + 1,
-        so that we allow the unsafe policy to take place.
-        The latter will be useful for testing a robust policy.
-    '''
     num_rows = 2
     obstacles = []
     car = Car(0, 0, 1)
