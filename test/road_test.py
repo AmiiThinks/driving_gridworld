@@ -1,3 +1,4 @@
+import numpy as np
 from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian

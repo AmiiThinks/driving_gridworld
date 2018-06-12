@@ -1,4 +1,5 @@
 from itertools import product, permutations
+import numpy as np
 
 from .obstacles import Bump, Pedestrian
 from .car import car_row, car_row_array
@@ -267,3 +268,8 @@ class Road(object):
             return obstacle.prob_of_appearing() * int(space_is_available)
         else:
             return 0
+
+    def car_layer(self):
+        layer = np.full([2, 4], False)
+        layer[self._car.row, self._car.col] = True
+        return layer
