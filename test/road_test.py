@@ -128,3 +128,24 @@ def test_ditch_layer(headlight_range):
     x[:, 1] = True
     x[:, -2] = True
     np.testing.assert_array_equal(patient.ditch_layer(), x)
+
+
+def test_obstacle_layers():
+    bumps = [Bump(-1, -1), Bump(0, 0), Bump(1, 3)]
+    pedestrians = [Pedestrian(-1, -1), Pedestrian(0, 1), Pedestrian(1, 2)]
+    headlight_range = 4
+    patient = Road(headlight_range, Car(0, 1, 1), bumps + pedestrians)
+
+    x_bump_layer = np.full([headlight_range, 6], False)
+    x_bump_layer[0, 1] = True
+    x_bump_layer[1, 4] = True
+
+    x_pedestrian_layer = np.full([headlight_range, 6], False)
+    x_pedestrian_layer[0, 2] = True
+    x_pedestrian_layer[1, 3] = True
+
+    patient = patient.obstacle_layers()
+
+    np.testing.assert_array_equal(patient[str(bumps[0])], x_bump_layer)
+    np.testing.assert_array_equal(patient[str(pedestrians[0])],
+                                  x_pedestrian_layer)
