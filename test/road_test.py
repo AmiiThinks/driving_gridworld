@@ -19,14 +19,13 @@ def test_transition_probs_without_obstacles_are_always_1():
 
 
 @pytest.mark.parametrize("obst", [Bump(0, 0), Pedestrian(0, 0)])
-def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_all_obstacles_already_on_road(obst):
+def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_all_obstacles_already_on_road(
+        obst):
     num_rows = 2
     road_test = Road(num_rows, Car(1, 1, 1), [obst])
-    patient = [
-        (positions, reveal_indices)
-        for positions, reveal_indices in
-        road_test.every_combination_of_revealed_obstacles()
-    ]
+    patient = [(positions, reveal_indices)
+               for positions, reveal_indices in
+               road_test.every_combination_of_revealed_obstacles()]
     assert patient == [(tuple(), set())]
 
 
@@ -35,10 +34,7 @@ def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_
 def test_transition_probs_with_one_obstacle_are_1(obst, action):
     num_rows = 2
     road_test = Road(num_rows, Car(1, 1, 1), [obst])
-    probs = [
-        prob
-        for next_state, prob, reward in road_test.successors(action)
-    ]
+    probs = [prob for next_state, prob, reward in road_test.successors(action)]
     assert probs == [1.0]
 
 
@@ -47,10 +43,7 @@ def test_transition_probs_with_one_obstacle_are_1(obst, action):
 def test_transition_probs_with_invisible_obstacle(obst, action):
     num_rows = 2
     road_test = Road(num_rows, Car(1, 1, 1), [obst])
-    probs = [
-        prob
-        for next_state, prob, reward in road_test.successors(action)
-    ]
+    probs = [prob for next_state, prob, reward in road_test.successors(action)]
     assert len(probs) == 5
     sum_probs = 0.0
     for i in range(len(probs)):
@@ -78,7 +71,7 @@ def test_road_cannot_start_with_car_going_faster_than_speed_limit():
     current_speed = 6
     car = Car(0, 0, current_speed)
     with pytest.raises(ValueError):
-        road_test = Road(num_rows, car, obstacles)
+        Road(num_rows, car, obstacles)
 
 
 @pytest.mark.parametrize("car", [Car(0, 0, 1), Car(0, 3, 1)])
@@ -95,13 +88,10 @@ def test_receive_negative_reward_for_driving_off_the_road(car, action):
 @pytest.mark.parametrize("action", ACTIONS)
 @pytest.mark.parametrize("speed", [1, 2, 3])
 def test_number_of_successors_invisible_obstacle_and_variable_speeds(
-    obst, action, speed):
+        obst, action, speed):
     num_rows = 2
     road_test = Road(num_rows, Car(1, 1, speed), [obst])
-    probs = [
-        prob
-        for next_state, prob, reward in road_test.successors(action)
-    ]
+    probs = [prob for next_state, prob, reward in road_test.successors(action)]
     assert len(probs) == 4 * speed + 1
 
 
