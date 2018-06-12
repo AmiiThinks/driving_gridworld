@@ -151,7 +151,6 @@ class Road(object):
         self._speed_limit = speed_limit
         self._obstacles = obstacles
         self._available_spaces = {}
-
         for pos in product(range(0, self._car.speed), range(4)):
             self._available_spaces[pos] = True
         for obs in self._obstacles:
