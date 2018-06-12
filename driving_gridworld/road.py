@@ -143,14 +143,6 @@ def combinations(iterable, r, collection=tuple):
 
 class Road(object):
     def __init__(self, num_rows, car, obstacles):
-        ''' Sets the speed limit to be equal to the number of rows plus one.
-            The reason for this is explained as follows: if the car drives
-            faster than the number of rows, it breaks the physical plausibility
-            of the game.
-            By allowing the car to drive at a speed equal to the number of rows
-            plus one, we allow an unsafe policy to take place. This will be
-            useful for testing a robust policy.
-        '''
         if num_rows + 1 < car.speed:
             raise ValueError("Car's speed above speed limit!")
         self._num_rows = num_rows
@@ -167,6 +159,17 @@ class Road(object):
                     del self._available_spaces[disallowed_position]
 
     def speed_limit(self):
+        '''The hard speed limit on this road.
+
+        Taking the `UP` action when traveling at the speed limit has no effect.
+
+        Set according to the headlight range since overdriving the
+        headlights too much breaks the physical plausibility of the game
+        due to the way we reusing obstacles to simulate arbitrarily long
+        roads with many obstacles. This is not too much of a restriction
+        though because even overdriving the headlights by one unit is
+        completely unsafe.
+        '''
         return self._num_rows + 1
 
     def obstacle_outside_car_path(self, obstacle):
