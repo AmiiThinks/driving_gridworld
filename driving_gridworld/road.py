@@ -295,3 +295,16 @@ class Road(object):
             if not self.obstacle_outside_car_path(o):
                 layers[c][o.row, o.col + 1] = True
         return layers
+
+    def layers(self):
+        layers = self.obstacle_layers()
+        layers[str(self._car)] = self.car_layer()
+        layers['|'] = self.wall_layer()
+        layers['d'] = self.ditch_layer()
+
+        full_layer = np.full([self._num_rows, 6], False)
+        for l in layers.values():
+            np.logical_or(full_layer, l, out=full_layer)
+        layers[' '] = np.logical_not(full_layer)
+
+        return layers
