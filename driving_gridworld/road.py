@@ -224,7 +224,7 @@ class Road(object):
                 reward += next_obstacle.reward(self._car)
             reward += self._car.reward()
             if self._car.col == 0 or self._car.col == 3:
-                reward += -4 * self._car.speed
+                reward -= 4 * self._car.speed
             next_road = self.__class__(self._num_rows, next_car,
                                        next_obstacles, self._speed_limit)
             yield (next_road, prob, reward)
