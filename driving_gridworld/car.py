@@ -40,3 +40,6 @@ class Car(object):
 
     def reward(self):
         return float(self.speed)
+
+    def __str__(self):
+        return 'C'
