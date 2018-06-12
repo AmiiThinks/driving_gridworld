@@ -285,3 +285,13 @@ class Road(object):
         layer[:, 1] = True
         layer[:, -2] = True
         return layer
+
+    def obstacle_layers(self):
+        layers = {}
+        for o in self._obstacles:
+            c = str(o)
+            if c not in layers:
+                layers[c] = np.full([self._num_rows, 6], False)
+            if not self.obstacle_outside_car_path(o):
+                layers[c][o.row, o.col + 1] = True
+        return layers
