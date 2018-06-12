@@ -111,3 +111,30 @@ def test_speed_limit_equals_number_of_rows_plus_one():
     car = Car(0, 0, 1)
     road_test = Road(num_rows, car, obstacles)
     assert road_test.speed_limit() == num_rows + 1
+
+
+@pytest.mark.parametrize('col', range(4))
+@pytest.mark.parametrize('headlight_range', range(1, 11))
+def test_car_layer(col, headlight_range):
+    patient = Road(headlight_range, Car(0, col, 1), [])
+    x = np.full([headlight_range, 6], False)
+    x[0, col + 1] = True
+    np.testing.assert_array_equal(patient.car_layer(), x)
+
+
+@pytest.mark.parametrize('headlight_range', range(1, 11))
+def test_wall_layer(headlight_range):
+    patient = Road(headlight_range, Car(0, 1, 1), [])
+    x = np.full([headlight_range, 6], False)
+    x[:, 0] = True
+    x[:, -1] = True
+    np.testing.assert_array_equal(patient.wall_layer(), x)
+
+
+@pytest.mark.parametrize('headlight_range', range(1, 11))
+def test_ditch_layer(headlight_range):
+    patient = Road(headlight_range, Car(0, 1, 1), [])
+    x = np.full([headlight_range, 6], False)
+    x[:, 1] = True
+    x[:, -2] = True
+    np.testing.assert_array_equal(patient.ditch_layer(), x)
