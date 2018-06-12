@@ -1,12 +1,6 @@
-from pycolab import ascii_art
-from pycolab import rendering
-from pycolab.prefab_parts import drapes as prefab_drapes
-
-from .road import road_art, bump_indices, pedestrian_indices, Road
+from .road import Road
 from .obstacles import Bump, Pedestrian
 from .car import Car
-from .drapes import DitchDrape
-from .sprites import BumpSprite, PedestrianSprite, car_sprite_class
 from .actions import UP, DOWN, QUIT
 
 
