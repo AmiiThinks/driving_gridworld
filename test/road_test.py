@@ -68,7 +68,8 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
 
 
 @pytest.mark.parametrize("action", ACTIONS)
-def test_positive_reward_drive_faster_no_collision(action):
+@pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
+def test_driving_faster_gives_a_larger_reward(action, current_speed):
     num_rows = 4
     obstacles = []
     speed_limit = 2
