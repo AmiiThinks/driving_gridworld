@@ -72,8 +72,7 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
 def test_driving_faster_gives_a_larger_reward(action, current_speed):
     num_rows = 4
     obstacles = []
-    speed_limit = 2
-    current_speed = 2
+    speed_limit = 4
     car = Car(0, 1, current_speed)
     road_test = Road(num_rows, car, obstacles, speed_limit)
     for next_state, prob, reward in road_test.successors(action):
