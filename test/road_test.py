@@ -202,6 +202,8 @@ def test_board():
     headlight_range = 4
     patient = Road(headlight_range, Car(0, 1, 1), bumps + pedestrians).board()
 
+    assert patient.dtype == 'uint8'
+
     x_bump_layer = np.full([headlight_range, 6], False)
     x_bump_layer[0, 1] = True
     x_bump_layer[1, 4] = True
