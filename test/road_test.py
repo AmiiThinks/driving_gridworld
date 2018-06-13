@@ -204,7 +204,7 @@ def test_layers():
     np.testing.assert_array_equal(patient[' '], x_empty_layer)
 
 
-def byte(c, encoding='ascii'):
+def _byte(c, encoding='ascii'):
     return bytes(c, encoding)[0]
 
 
@@ -216,33 +216,37 @@ def test_board():
 
     assert patient.dtype == 'uint8'
 
-    x_bump_layer = np.full([headlight_range, 6], False)
-    x_bump_layer[0, 1] = True
-    x_bump_layer[1, 4] = True
+    x_board = np.full([headlight_range, 6], _byte(' '), dtype='uint8')
 
-    x_pedestrian_layer = np.full([headlight_range, 6], False)
-    x_pedestrian_layer[0, 2] = True
-    x_pedestrian_layer[1, 3] = True
+    x_board[:, 0] = _byte('|')
+    x_board[:, -1] = _byte('|')
 
-    x_car_layer = np.full([headlight_range, 6], False)
-    x_car_layer[0, 1 + 1] = True
+    x_board[:, 1] = _byte('d')
+    x_board[:, -2] = _byte('d')
 
-    x_wall_layer = np.full([headlight_range, 6], False)
-    x_wall_layer[:, 0] = True
-    x_wall_layer[:, -1] = True
+    x_board[0, 1] = bumps[0].to_byte()
+    x_board[1, 4] = bumps[0].to_byte()
 
-    x_ditch_layer = np.full([headlight_range, 6], False)
-    x_ditch_layer[:, 1] = True
-    x_ditch_layer[:, -2] = True
+    x_board[0, 2] = pedestrians[0].to_byte()
+    x_board[1, 3] = pedestrians[0].to_byte()
 
-    x_empty_layer = np.logical_not(
-        np.logical_or(x_ditch_layer,
-                      np.logical_or(
-                          np.logical_or(x_bump_layer, x_pedestrian_layer),
-                          np.logical_or(x_car_layer, x_wall_layer))))
-
-    x_board = (x_empty_layer * byte(' ') + x_bump_layer * byte('b') +
-               x_pedestrian_layer * byte('p') + x_wall_layer * byte('|') +
-               x_ditch_layer * byte('d') + x_car_layer * byte('C'))
+    x_board[0, 1 + 1] = _byte('C')
 
     np.testing.assert_array_equal(patient, x_board)
+
+
+@pytest.mark.parametrize('col', [0, 1])
+def test_obstacles_appear_over_dirt_and_pavement(col):
+    bumps = [Bump(0, col)]
+    headlight_range = 4
+    patient = Road(headlight_range, Car(0, 2, 1), bumps).board()
+    assert patient[0, col + 1] == bumps[0].to_byte()
+
+
+@pytest.mark.parametrize('col', [0, 1, 2])
+def test_car_appears_over_dirt_and_pavement(col):
+    bumps = [Bump(0, 2)]
+    headlight_range = 4
+    c = Car(0, col, 1)
+    patient = Road(headlight_range, c, bumps).board()
+    assert patient[0, col + 1] == c.to_byte()

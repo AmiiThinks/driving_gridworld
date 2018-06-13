@@ -315,11 +315,29 @@ class Road(object):
 
         return layers
 
+    def ordered_layers(self):
+        obstacle_layers = self.obstacle_layers()
+
+        layers = [
+            (' ', np.full([self._num_rows, 6], False)),
+            ('|', self.wall_layer()),
+            ('d', self.ditch_layer())
+        ] + list(obstacle_layers.items())
+        layers.append((str(self._car), self.car_layer()))
+
+        for i in range(1, len(layers)):
+            np.logical_or(layers[0][1], layers[i][1], out=layers[0][1])
+        np.logical_not(layers[0][1], out=layers[0][1])
+
+        return layers
+
     def board(self):
-        return sum([
-            np.multiply(_byte(c), layer, dtype='uint8')
-            for c, layer in self.layers().items()
-        ])
+        board = np.zeros([self._num_rows, 6], dtype='uint8')
+        for c, layer in self.ordered_layers():
+            partial = np.multiply(_byte(c), layer, dtype='uint8')
+            is_present = partial > 0
+            board[is_present] = partial[is_present]
+        return board
 
     def observation(self):
         return Observation(self.board(), self.layers())
