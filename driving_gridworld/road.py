@@ -160,8 +160,12 @@ class Road(object):
                                        next_obstacles)
             yield (next_road, prob, reward)
 
-    def to_key(self, show_walls=False):
-        return (self.to_s(show_walls=show_walls), self._car.speed)
+    def to_key(self):
+        obstacles = []
+        for o in self._obstacles:
+            if self.obstacle_is_visible(o):
+                obstacles.append((str(o), o.row, o.col))
+        return (self._car.col, self._car.speed, frozenset(obstacles))
 
     def to_s(self, show_walls=True):
         template = (['|', 'd', ' ', ' ', 'd', '|']

@@ -276,3 +276,27 @@ def test_car_cannot_change_langes_when_stopped(action):
     assert s.to_s() == patient.to_s()
     assert p == 1
     assert r == -1
+
+
+def test_to_key():
+    bumps = [Bump(0, 2)]
+    headlight_range = 1
+    car = Car(2, 1)
+    patient = Road(headlight_range, car, bumps).to_key()
+
+    assert patient == (2, 1, frozenset([('b', 0, 2)]))
+
+    obstacles = [
+        Bump(-1, 0),
+        Bump(-1, -1),
+        Bump(0, 2),
+        Pedestrian(1, 1),
+        Pedestrian(1, 2),
+        Pedestrian(2, 3)
+    ]
+    headlight_range = 1
+    car = Car(2, 1)
+    patient = Road(headlight_range, car, obstacles).to_key()
+
+    assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
+                                                                   2)]))
