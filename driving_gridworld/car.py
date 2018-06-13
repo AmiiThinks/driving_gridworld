@@ -43,3 +43,6 @@ class Car(object):
 
     def __str__(self):
         return 'C'
+
+    def to_byte(self, encoding='ascii'):
+        return bytes(str(self), encoding)[0]
