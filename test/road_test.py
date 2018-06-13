@@ -57,12 +57,9 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
 @pytest.mark.parametrize("action", ACTIONS)
 @pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
 def test_driving_faster_gives_a_larger_reward(action, current_speed):
-    num_rows = 4
-    obstacles = []
-    car = Car(0, 1, current_speed)
-    road_test = Road(num_rows, car, obstacles)
+    road_test = Road(4, Car(0, 1, current_speed))
     for next_state, prob, reward in road_test.successors(action):
-        assert reward == float(current_speed)
+        assert reward == current_speed - 1.0
 
 
 def test_road_cannot_start_with_car_going_faster_than_speed_limit():
@@ -264,11 +261,25 @@ def test_turning_into_an_obstacle_causes_a_collision(row):
     s, p, r = successors[0]
 
     assert p == 1.0
-    assert r == bumps[0].reward_for_collision(car.speed) + car.speed
+    assert r == bumps[0].reward_for_collision(car.speed) + car.speed - 1.0
 
     successors = list(patient.successors(NO_OP))
     assert len(successors) == 1
     s, p, r = successors[0]
 
     assert p == 1.0
-    assert r == car.speed
+    assert r == car.speed - 1.0
+
+
+@pytest.mark.parametrize("action", ACTIONS)
+def test_car_cannot_change_langes_when_stopped(action):
+    car = Car(1, 1, speed=0)
+    patient = Road(4, car)
+
+    successors = list(patient.successors(action))
+    assert len(successors) == 1
+    s, p, r = successors[0]
+
+    assert s.to_s() == patient.to_s()
+    assert p == 1
+    assert r == -1

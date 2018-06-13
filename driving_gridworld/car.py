@@ -26,18 +26,22 @@ class Car(object):
 
     def next(self, action, speed_limit):
         assert speed_limit > 0
+
+        col = self.col
+        speed = self.speed
         if action == UP:
-            return Car(self.row, self.col, min(self.speed + 1, speed_limit))
+            speed = min(self.speed + 1, speed_limit)
         elif action == DOWN:
-            return Car(self.row, self.col, max(self.speed - 1, 1))
+            speed = max(self.speed - 1, 0)
         elif action == LEFT:
-            return Car(self.row, max(self.col - 1, 0), self.speed)
+            if self.speed > 0:
+                col = max(self.col - 1, 0)
         elif action == RIGHT:
-            return Car(self.row, min(self.col + 1, 3), self.speed)
-        elif action == NO_OP:
-            return Car(self.row, self.col, self.speed)
-        else:
+            if self.speed > 0:
+                col = min(self.col + 1, 3)
+        elif action != NO_OP:
             raise ValueError('Unrecognized action, "{}".'.format(action))
+        return Car(self.row, col, speed)
 
     def reward(self):
         return float(self.speed)
