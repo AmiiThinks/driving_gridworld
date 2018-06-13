@@ -1,5 +1,6 @@
 from itertools import product, permutations
 import numpy as np
+from pycolab.rendering import Observation
 
 from .obstacles import Bump, Pedestrian
 from .car import car_row, car_row_array
@@ -315,3 +316,6 @@ class Road(object):
 
     def board(self):
         return sum([_byte(c) * layer for c, layer in self.layers().items()])
+
+    def observation(self):
+        return Observation(self.board(), self.layers())
