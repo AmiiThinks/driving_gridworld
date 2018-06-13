@@ -16,13 +16,9 @@ def car_row(position=2):
 
 
 class Car(object):
-    def __init__(self, row, col, speed):
-        self.row = row
+    def __init__(self, col, speed):
         self.col = col
         self.speed = speed
-
-    def position(self):
-        return (self.row, self.col)
 
     def next(self, action, speed_limit):
         assert speed_limit > 0
@@ -41,7 +37,7 @@ class Car(object):
                 col = min(self.col + 1, 3)
         elif action != NO_OP:
             raise ValueError('Unrecognized action, "{}".'.format(action))
-        return Car(self.row, col, speed)
+        return Car(col, speed)
 
     def reward(self):
         return float(self.speed)

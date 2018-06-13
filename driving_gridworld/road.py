@@ -2,129 +2,11 @@ from itertools import product, permutations
 import numpy as np
 from pycolab.rendering import Observation
 
-from .obstacles import Bump, Pedestrian
-from .car import car_row, car_row_array
-
-
-def valid_meta_configurations(num_rows, num_bumps, num_pedestrians,
-                              speed_limit):
-    assert num_rows > 1
-    num_rows_above_car = num_rows - 1
-    num_columns = 4
-    num_spaces = num_rows_above_car * num_columns
-    for speed in range(speed_limit):
-        for car_position in range(num_columns):
-            for num_present_bumps in range(num_bumps + 1):
-                for num_present_pedestrians in range(num_pedestrians + 1):
-                    if (num_present_bumps + num_present_pedestrians <=
-                            num_spaces):
-                        yield (speed, car_position, num_present_bumps,
-                               num_present_pedestrians)
-
-
-def determinstic_state_component_generator(num_rows, num_bumps,
-                                           num_pedestrians, speed_limit):
-    assert num_rows > 1
-    num_rows_above_car = num_rows - 1
-    num_columns = 4
-    available_columns = {}
-    for i in range(num_rows_above_car):
-        for j in range(num_columns):
-            available_columns[(i, j)] = True
-
-    def legal_positions():
-        return available_columns.keys()
-
-    for (speed, car_position, num_present_bumps,
-         num_present_pedestrians) in valid_meta_configurations(
-             num_rows, num_bumps, num_pedestrians, speed_limit):
-        bump_positions = []
-        pedestrian_positions = []
-        for bump_positions in combinations(legal_positions(),
-                                           num_present_bumps):
-            for pos in bump_positions:
-                del available_columns[pos]
-            for pedestrian_positions in combinations(legal_positions(),
-                                                     num_present_pedestrians):
-                yield (speed, num_rows, bump_positions, pedestrian_positions,
-                       car_position)
-            for pos in bump_positions:
-                available_columns[pos] = True
-
-
-def determinstic_state_generator(num_rows, num_bumps, num_pedestrians,
-                                 speed_limit):
-    for (speed, num_rows, bump_positions, pedestrian_positions,
-         car_position) in determinstic_state_component_generator(
-             num_rows, num_bumps, num_pedestrians, speed_limit):
-        yield speed, road_state(num_rows, bump_positions, pedestrian_positions,
-                                car_position)
-
-
-def bump_indices(num_bumps):
-    assert num_bumps >= 0
-    return ''.join([str(i) for i in range(num_bumps)])
-
-
-def pedestrian_indices(num_pedestrians, num_bumps):
-    assert num_bumps >= 0
-    assert num_pedestrians >= 0
-    return ''.join([str(i + num_bumps) for i in range(num_pedestrians)])
-
-
-def road_state(num_rows,
-               bump_positions=[],
-               pedestrian_positions=[],
-               car_position=2,
-               show_walls=True):
-    assert num_rows > 1
-
-    if show_walls:
-        board = (
-            [['+', 'd', ' ', ' ', 'd', ' ']] + [[' ', 'd', ' ', ' ', 'd', ' ']
-                                                for _ in range(num_rows - 2)] +
-            [car_row_array(car_position, show_walls=show_walls)])
-    else:
-        board = ([['d', ' ', ' ', 'd']] + [['d', ' ', ' ', 'd']
-                                           for _ in range(num_rows - 2)] +
-                 [car_row_array(car_position, show_walls=show_walls)])
-    for i, j in bump_positions:
-        col = j + int(show_walls)
-        if i < len(board) and 0 <= col <= len(board[i]) - int(show_walls):
-            board[i][col] = 'b'
-    for i, j in pedestrian_positions:
-        col = j + int(show_walls)
-        if i < len(board) and 0 <= col <= len(board[i]) - int(show_walls):
-            board[i][col] = 'p'
-    return '\n'.join([''.join(row) for row in board])
-
-
-def road_art(num_rows, num_bumps, num_pedestrians):
-    '''
-    Legend:
-        ' ': pavement.                    'd': dirt ditch.
-        'b': bump.                        'p': pedestrian.
-        'C': the player's car.
-    '''
-    assert num_rows > 0
-    assert num_bumps >= 0
-    assert num_pedestrians >= 0
-
-    wall_to_wall_width = 6
-    max_width = max(num_bumps, num_pedestrians, wall_to_wall_width)
-    return (
-        [
-            bump_indices(num_bumps) + ' ' * (max_width - num_bumps),
-            (pedestrian_indices(num_pedestrians, num_bumps) + ' ' *
-             (max_width - num_pedestrians)), '+d  d ' + ' ' *
-            (max_width - wall_to_wall_width)
-        ] + [' d  d ' + ' ' * (max_width - wall_to_wall_width)] *
-        (num_rows - 2) + [car_row() + ' ' * (max_width - wall_to_wall_width)])
+from .car import car_row_array
 
 
 def combinations(iterable, r, collection=tuple):
-    # combinations('ABCD', 2) --> AB AC AD BC BD CD
-    # combinations(range(4), 3) --> 012 013 023 123
+    '''`r`-size `collection`s of elements in `iterable`.'''
     iterable = tuple(iterable)
     n = len(iterable)
     if r > n:
@@ -148,21 +30,31 @@ def _byte(c, encoding='ascii'):
 
 
 class Road(object):
-    def __init__(self, num_rows, car, obstacles=[]):
-        if num_rows + 1 < car.speed:
-            raise ValueError("Car's speed above speed limit!")
-        self._num_rows = num_rows
-        self._num_columns = 4
+    def __init__(self, headlight_range, car, obstacles=[]):
+        self._headlight_range = headlight_range
+
+        if self.speed_limit() < car.speed:
+            raise ValueError(
+                "Car's speed, {}, breaks the speed limit, {}.".format(
+                    car.speed, self.speed_limit()))
+
+        self._num_lanes = 4
         self._car = car
         self._obstacles = obstacles
         self._available_spaces = {}
-        for pos in product(range(0, self._car.speed), range(4)):
+        for pos in product(range(0, self._car.speed), range(self._num_lanes)):
             self._available_spaces[pos] = True
         for obs in self._obstacles:
             if not self.obstacle_outside_car_path(obs):
                 disallowed_position = obs.position()
                 if disallowed_position in self._available_spaces:
                     del self._available_spaces[disallowed_position]
+
+    def _car_row(self):
+        return self._headlight_range
+
+    def _num_rows(self):
+        return self._headlight_range + 1
 
     def speed_limit(self):
         '''The hard speed limit on this road.
@@ -176,11 +68,11 @@ class Road(object):
         though because even overdriving the headlights by one unit is
         completely unsafe.
         '''
-        return self._num_rows + 1
+        return self._headlight_range + 1
 
     def obstacle_outside_car_path(self, obstacle):
-        return (obstacle.col < 0 or obstacle.col >= self._num_columns
-                or obstacle.row >= self._num_rows)
+        return (obstacle.col < 0 or obstacle.col >= self._num_lanes
+                or obstacle.row > self._headlight_range)
 
     def every_combination_of_revealed_obstacles(self):
         hidden_obstacle_indices = [
@@ -244,16 +136,16 @@ class Road(object):
                 next_obstacles.append(next_obstacle)
 
                 if next_obstacle.col == next_car.col:
-                    obstacle_was_in_front_of_car = (obs.row < self._car.row
+                    obstacle_was_in_front_of_car = (obs.row < self._car_row()
                                                     or obs_is_revealed)
-                    car_ran_over_obstacle = (obstacle_was_in_front_of_car and
-                                             next_obstacle.row >= next_car.row)
+                    car_ran_over_obstacle = (
+                        obstacle_was_in_front_of_car
+                        and next_obstacle.row >= self._car_row())
                     car_changed_lanes = self._car.col != next_car.col
                     car_changed_lanes_into_obstacle = (
-                        car_changed_lanes and self._car.row == obs.row)
-                    collision_occurred = (
-                        car_changed_lanes_into_obstacle
-                        or car_ran_over_obstacle)
+                        car_changed_lanes and self._car_row() == obs.row)
+                    collision_occurred = (car_changed_lanes_into_obstacle
+                                          or car_ran_over_obstacle)
 
                     if collision_occurred:
                         reward += next_obstacle.reward_for_collision(
@@ -264,7 +156,7 @@ class Road(object):
             if car_is_off_road:
                 reward -= 4 * self._car.speed
 
-            next_road = self.__class__(self._num_rows, next_car,
+            next_road = self.__class__(self._headlight_range, next_car,
                                        next_obstacles)
             yield (next_road, prob, reward)
 
@@ -272,20 +164,14 @@ class Road(object):
         return (self.to_s(show_walls=show_walls), self._car.speed)
 
     def to_s(self, show_walls=True):
-        bumps = [
-            obstacle.position() for obstacle in self._obstacles
-            if isinstance(obstacle, Bump)
-        ]
-        pedestrians = [
-            obstacle.position() for obstacle in self._obstacles
-            if isinstance(obstacle, Pedestrian)
-        ]
-        return road_state(
-            self._num_rows,
-            bumps,
-            pedestrians,
-            car_position=self._car.col,
-            show_walls=show_walls)
+        template = (['|', 'd', ' ', ' ', 'd', '|']
+                    if show_walls else ['d', ' ', ' ', 'd'])
+        board = ([template for _ in range(self._headlight_range)] +
+                 [car_row_array(self._car.col, show_walls=show_walls)])
+        for obs in self._obstacles:
+            if self.obstacle_is_visible(obs):
+                board[obs.row, obs.col + int(show_walls)] = str(obs)
+        return '\n'.join([''.join(row) for row in board])
 
     def prob_obstacle_appears(self, obstacle, num_obstacles_revealed):
         if self.obstacle_outside_car_path(obstacle):
@@ -296,18 +182,18 @@ class Road(object):
             return 0
 
     def car_layer(self):
-        layer = np.full([self._num_rows, 6], False)
-        layer[self._car.row, self._car.col + 1] = True
+        layer = np.full([self._num_rows(), self._num_lanes + 2], False)
+        layer[self._car_row(), self._car.col + 1] = True
         return layer
 
     def wall_layer(self):
-        layer = np.full([self._num_rows, 6], False)
+        layer = np.full([self._num_rows(), self._num_lanes + 2], False)
         layer[:, 0] = True
         layer[:, -1] = True
         return layer
 
     def ditch_layer(self):
-        layer = np.full([self._num_rows, 6], False)
+        layer = np.full([self._num_rows(), self._num_lanes + 2], False)
         layer[:, 1] = True
         layer[:, -2] = True
         return layer
@@ -317,8 +203,9 @@ class Road(object):
         for o in self._obstacles:
             c = str(o)
             if c not in layers:
-                layers[c] = np.full([self._num_rows, 6], False)
-            if not self.obstacle_outside_car_path(o) and o.row >= 0:
+                layers[c] = np.full([self._num_rows(), self._num_lanes + 2],
+                                    False)
+            if self.obstacle_is_visible(o):
                 layers[c][o.row, o.col + 1] = True
         return layers
 
@@ -328,7 +215,7 @@ class Road(object):
         layers['|'] = self.wall_layer()
         layers['d'] = self.ditch_layer()
 
-        full_layer = np.full([self._num_rows, 6], False)
+        full_layer = np.full([self._num_rows(), self._num_lanes + 2], False)
         for l in layers.values():
             np.logical_or(full_layer, l, out=full_layer)
         layers[' '] = np.logical_not(full_layer)
@@ -338,8 +225,8 @@ class Road(object):
     def ordered_layers(self):
         obstacle_layers = self.obstacle_layers()
 
-        layers = [(' ', np.full([self._num_rows, 6], False)),
-                  ('|', self.wall_layer()),
+        layers = [(' ', np.full([self._num_rows(), self._num_lanes + 2],
+                                False)), ('|', self.wall_layer()),
                   ('d', self.ditch_layer())] + list(obstacle_layers.items())
         layers.append((str(self._car), self.car_layer()))
 
@@ -350,7 +237,8 @@ class Road(object):
         return layers
 
     def board(self):
-        board = np.zeros([self._num_rows, 6], dtype='uint8')
+        board = np.zeros(
+            [self._num_rows(), self._num_lanes + 2], dtype='uint8')
         for c, layer in self.ordered_layers():
             partial = np.multiply(_byte(c), layer, dtype='uint8')
             is_present = partial > 0
@@ -368,3 +256,6 @@ class Road(object):
             if cumulative_p > v:
                 return s, r
         return s, r
+
+    def obstacle_is_visible(self, obs):
+        return not self.obstacle_outside_car_path(obs) and obs.row >= 0

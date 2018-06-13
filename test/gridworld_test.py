@@ -16,7 +16,7 @@ def test_game_over(action):
 
 
 def test_initial_observation():
-    patient = DrivingGridworld(4, 0, 0, 1, discount=0.8)
+    patient = DrivingGridworld(3, 0, 0, 1, discount=0.8)
     assert patient.road.to_s(show_walls=False) == 'd  d\nd  d\nd  d\nd Cd'
 
     o, r, d = patient.its_showtime()

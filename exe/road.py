@@ -13,7 +13,7 @@ import fire
 import numpy as np
 
 
-def main(num_rows=5,
+def main(headlight_range=5,
          num_bumps=3,
          num_pedestrians=3,
          speed=1,
@@ -21,7 +21,7 @@ def main(num_rows=5,
          ui=False):
     np.random.seed(42)
 
-    num_rows = int(num_rows)
+    headlight_range = int(headlight_range)
     num_bumps = int(num_bumps)
     num_pedestrians = int(num_pedestrians)
     speed = int(speed)
@@ -31,13 +31,15 @@ def main(num_rows=5,
     if ui:
         from driving_gridworld.human_ui import UiDrivingGridworld
 
-        game = UiDrivingGridworld(num_rows, num_bumps, num_pedestrians, speed)
+        game = UiDrivingGridworld(headlight_range, num_bumps, num_pedestrians,
+                                  speed)
 
         game.ui_play()
     else:
         from driving_gridworld.gridworld import DrivingGridworld
 
-        game = DrivingGridworld(num_rows, num_bumps, num_pedestrians, speed)
+        game = DrivingGridworld(headlight_range, num_bumps, num_pedestrians,
+                                speed)
 
         observation, _, __ = game.its_showtime()
 

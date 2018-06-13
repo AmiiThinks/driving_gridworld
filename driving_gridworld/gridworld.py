@@ -1,4 +1,3 @@
-import numpy as np
 from .road import Road
 from .obstacles import Bump, Pedestrian
 from .car import Car
@@ -6,16 +5,11 @@ from .actions import QUIT, NO_OP, LIST_CONTROLS
 from collections import namedtuple
 
 
-def game_board(num_rows):
-    assert num_rows > 1
-    return ['|    |'] * num_rows
-
-
 class DrivingGridworld(object):
     Backdrop = namedtuple('Backdrop', ['palette'])
 
     def __init__(self,
-                 num_rows=5,
+                 headlight_range=5,
                  num_bumps=3,
                  num_pedestrians=3,
                  speed=1,
@@ -26,16 +20,16 @@ class DrivingGridworld(object):
         self._speed = speed
         self._discount = discount
 
-        self._num_rows = num_rows
+        self._headlight_range = headlight_range
         self._num_bumps = num_bumps
         self._num_pedestrians = num_pedestrians
 
-        self.car = Car(self._num_rows - 1, 2, self._initial_speed)
+        self.car = Car(2, self._initial_speed)
         initial_bumps = [Bump(-1, -1) for _ in range(self._num_bumps)]
         initial_pedestrians = [
             Pedestrian(-1, -1) for _ in range(self._num_pedestrians)
         ]
-        self.road = Road(self._num_rows, self.car,
+        self.road = Road(self._headlight_range, self.car,
                          initial_bumps + initial_pedestrians)
 
         # For compatibility with pycolab croppers.
