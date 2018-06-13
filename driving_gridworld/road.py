@@ -298,7 +298,7 @@ class Road(object):
             c = str(o)
             if c not in layers:
                 layers[c] = np.full([self._num_rows, 6], False)
-            if not self.obstacle_outside_car_path(o):
+            if not self.obstacle_outside_car_path(o) and o.row >= 0:
                 layers[c][o.row, o.col + 1] = True
         return layers
 

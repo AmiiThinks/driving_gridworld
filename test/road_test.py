@@ -151,6 +151,18 @@ def test_obstacle_layers():
                                   x_pedestrian_layer)
 
 
+def test_obstacles_outside_headlight_range_are_hidden():
+    bumps = [Bump(-1, 0)]
+    headlight_range = 4
+    patient = Road(headlight_range, Car(0, 1, 1),
+                   bumps).obstacle_layers()
+
+    assert len(patient) == 1
+
+    x_bump_layer = np.full([headlight_range, 6], False)
+    np.testing.assert_array_equal(patient[str(bumps[0])], x_bump_layer)
+
+
 def test_layers():
     bumps = [Bump(-1, -1), Bump(0, 0), Bump(1, 3)]
     pedestrians = [Pedestrian(-1, -1), Pedestrian(0, 1), Pedestrian(1, 2)]
