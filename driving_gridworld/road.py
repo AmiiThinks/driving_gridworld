@@ -323,3 +323,12 @@ class Road(object):
 
     def observation(self):
         return Observation(self.board(), self.layers())
+
+    def sample_transition(self, a):
+        v = np.random.uniform()
+        cumulative_p = 0.0
+        for s, p, r in self.successors(a):
+            cumulative_p += p
+            if cumulative_p > v:
+                return s, r
+        return s, r
