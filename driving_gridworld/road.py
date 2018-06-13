@@ -43,6 +43,10 @@ class Road(object):
         self._obstacles = obstacles
         self._available_spaces = set()
 
+    def copy(self):
+        return self.__class__(self._headlight_range, self._car,
+                              self._obstacles)
+
     def _car_row(self):
         return self._headlight_range
 
