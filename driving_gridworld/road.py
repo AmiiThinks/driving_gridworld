@@ -246,12 +246,16 @@ class Road(object):
                 if next_obstacle.col == next_car.col:
                     obstacle_was_in_front_of_car = (obs.row < self._car.row
                                                     or obs_is_revealed)
+                    car_ran_over_obstacle = (obstacle_was_in_front_of_car and
+                                             next_obstacle.row >= next_car.row)
                     car_changed_lanes = self._car.col != next_car.col
-                    car_moved_into_or_past_obstacle = (
-                        (obstacle_was_in_front_of_car or car_changed_lanes)
-                        and next_obstacle.row >= next_car.row)
+                    car_changed_lanes_into_obstacle = (
+                        car_changed_lanes and self._car.row == obs.row)
+                    collision_occurred = (
+                        car_changed_lanes_into_obstacle
+                        or car_ran_over_obstacle)
 
-                    if car_moved_into_or_past_obstacle:
+                    if collision_occurred:
                         reward += next_obstacle.reward_for_collision(
                             self._car.speed)
             reward += self._car.reward()
