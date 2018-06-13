@@ -244,7 +244,8 @@ class Road(object):
             reward += self._car.reward()
             if self._car.col == 0 or self._car.col == 3:
                 reward -= 4 * self._car.speed
-            next_road = self.__class__(self._num_rows, next_car, next_obstacles)
+            next_road = self.__class__(self._num_rows, next_car,
+                                       next_obstacles)
             yield (next_road, prob, reward)
 
     def to_key(self, show_walls=False):
@@ -315,7 +316,10 @@ class Road(object):
         return layers
 
     def board(self):
-        return sum([_byte(c) * layer for c, layer in self.layers().items()])
+        return sum([
+            np.multiply(_byte(c), layer, dtype='uint8')
+            for c, layer in self.layers().items()
+        ])
 
     def observation(self):
         return Observation(self.board(), self.layers())
