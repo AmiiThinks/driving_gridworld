@@ -148,7 +148,7 @@ def _byte(c, encoding='ascii'):
 
 
 class Road(object):
-    def __init__(self, num_rows, car, obstacles):
+    def __init__(self, num_rows, car, obstacles=[]):
         if num_rows + 1 < car.speed:
             raise ValueError("Car's speed above speed limit!")
         self._num_rows = num_rows
@@ -224,7 +224,7 @@ class Road(object):
             prob = 1.0
             num_obstacles_revealed = 0
             next_obstacles = []
-            reward = 0.0
+            reward = -1.0
             for i in range(len(self._obstacles)):
                 obs = self._obstacles[i]
                 p = self.prob_obstacle_appears(obs, num_obstacles_revealed)
