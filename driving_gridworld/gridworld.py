@@ -53,14 +53,8 @@ class DrivingGridworld(object):
             # TODO: Show controls
             return self.play(NO_OP)
         else:
-            r = np.random.uniform()
-            cum_p = 0.0
-            for s, p, r in self.road.successors(a):
-                cum_p += p
-                if cum_p > r:
-                    self.road = s
-                    return s.observation(), r, self._discount
-            return s.observation(), r, self._discount
+            self.road, reward = self.road.sample_transition(a)
+            return self.road.observation(), reward, self._discount
 
     def with_walls_removed(self, board):
         return board[:, 1:-1]
