@@ -4,33 +4,24 @@ from driving_gridworld.gridworld import DrivingGridworld
 from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS
 
 
-@pytest.mark.skip(reason='Ignoring until pycolab is removed.')
-@pytest.mark.parametrize("speed", range(1, 4))
-def test_to_road_without_observation_argument_always_returns_the_root_state(
-        speed):
-    patient = DrivingGridworld(2, 0, 0, speed)
-    road = patient.to_road()
-    assert road.to_s(show_walls=False) == '    \n   c '
-
-
 @pytest.mark.parametrize("action", ACTIONS + [QUIT, LIST_CONTROLS])
 def test_game_over(action):
-    patient = DrivingGridworld(4, 0, 0, 1)
-    patient.its_showtime()
+    patient = DrivingGridworld(4, 0, 0, 1, discount=0.123)
+    o, r, d = patient.its_showtime()
+    assert d == 0
     assert not patient.game_over
-    patient.play(action)
+    o, r, d = patient.play(action)
     assert patient.game_over == (action == QUIT)
+    assert d == 0.123
 
 
-@pytest.mark.xfail()
 def test_initial_observation():
-    patient = DrivingGridworld(4, 0, 0, 1)
-    road = patient.to_road()
-    assert road.to_s(show_walls=False) == 'd  d\nd  d\nd  d\nd Cd'
+    patient = DrivingGridworld(4, 0, 0, 1, discount=0.8)
+    assert patient.road.to_s(show_walls=False) == 'd  d\nd  d\nd  d\nd Cd'
 
     o, r, d = patient.its_showtime()
-    assert r == 1
-    assert d == 1
+    assert r == 0
+    assert d == 0
 
     np.testing.assert_array_equal(
         o.board,

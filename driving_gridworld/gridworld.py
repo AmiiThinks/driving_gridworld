@@ -1,7 +1,9 @@
+import numpy as np
 from .road import Road
 from .obstacles import Bump, Pedestrian
 from .car import Car
-from .actions import UP, DOWN, QUIT
+from .actions import QUIT, NO_OP, LIST_CONTROLS
+from collections import namedtuple
 
 
 def game_board(num_rows):
@@ -10,31 +12,55 @@ def game_board(num_rows):
 
 
 class DrivingGridworld(object):
-    def __init__(self, num_rows=5, num_bumps=3, num_pedestrians=3, speed=1):
+    Backdrop = namedtuple('Backdrop', ['palette'])
+
+    def __init__(self,
+                 num_rows=5,
+                 num_bumps=3,
+                 num_pedestrians=3,
+                 speed=1,
+                 discount=0.99):
         self.the_plot = {}
         self.game_over = False
         self._initial_speed = speed
         self._speed = speed
+        self._discount = discount
 
         self._num_rows = num_rows
         self._num_bumps = num_bumps
         self._num_pedestrians = num_pedestrians
 
-    def _speed_limit(self):
-        return self._num_rows + 1
+        self.car = Car(self._num_rows - 1, 2, self._initial_speed)
+        initial_bumps = [Bump(-1, -1) for _ in range(self._num_bumps)]
+        initial_pedestrians = [
+            Pedestrian(-1, -1) for _ in range(self._num_pedestrians)
+        ]
+        self.road = Road(self._num_rows, self.car,
+                         initial_bumps + initial_pedestrians)
+
+        # For compatibility with pycolab croppers.
+        self.things = []
+        self.backdrop = self.Backdrop([])
 
     def its_showtime(self):
-        # TODO:
-        pass
+        return self.road.observation(), 0.0, 0.0
 
     def play(self, a):
         if a == QUIT:
             self.game_over = True
-        elif a == UP:
-            self._speed = min(self._speed + 1, self._speed_limit())
-        elif a == DOWN:
-            self._speed = max(self._speed - 1, 1)
-        pass
+            return self.play(NO_OP)
+        elif a == LIST_CONTROLS:
+            # TODO: Show controls
+            return self.play(NO_OP)
+        else:
+            r = np.random.uniform()
+            cum_p = 0.0
+            for s, p, r in self.road.successors(a):
+                cum_p += p
+                if cum_p > r:
+                    self.road = s
+                    return s.observation(), r, self._discount
+            return s.observation(), r, self._discount
 
     def with_walls_removed(self, board):
         return board[:, 1:-1]
@@ -48,15 +74,5 @@ class DrivingGridworld(object):
         ]
         return ('\n'.join(ascii_board_rows), speed)
 
-    def to_road(self, o=None):
-        if o is None:
-            car = Car(self._num_rows - 1, 2, self._initial_speed)
-            initial_bumps = [Bump(-1, -1) for _ in range(self._num_bumps)]
-            initial_pedestrians = [
-                Pedestrian(-1, -1) for _ in range(self._num_pedestrians)
-            ]
-            return Road(self._num_rows,
-                        car, initial_bumps + initial_pedestrians,
-                        self._speed_limit())
-        else:
-            pass
+    def speed(self):
+        return self.car.speed
