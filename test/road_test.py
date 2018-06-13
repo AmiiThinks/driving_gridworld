@@ -22,7 +22,7 @@ def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_
     road_test = Road(headlight_range, Car(1, 1), [obst])
     patient = [(positions, reveal_indices)
                for positions, reveal_indices in
-               road_test.every_combination_of_revealed_obstacles()]
+               road_test.every_combination_of_revealed_obstacles(1)]
     assert patient == [(tuple(), set())]
 
 
@@ -41,14 +41,18 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
     headlight_range = 2
     road_test = Road(headlight_range, Car(1, 1), [obst])
     probs = [prob for next_state, prob, reward in road_test.successors(action)]
-    assert len(probs) == 5
-    sum_probs = 0.0
-    for i in range(len(probs)):
-        assert 0.0 <= probs[i] <= 1.0
-        sum_probs += probs[i]
-    assert sum_probs == pytest.approx(1.0)
-    assert probs[0] == max(probs)
-    assert probs[1:] == [obst.prob_of_appearing() / 4] * 4
+
+    if action == LEFT or action == RIGHT:
+        assert probs == [1.0]
+    else:
+        assert len(probs) == 5
+        sum_probs = 0.0
+        for i in range(len(probs)):
+            assert 0.0 <= probs[i] <= 1.0
+            sum_probs += probs[i]
+        assert sum_probs == pytest.approx(1.0)
+        assert probs[1:] == [obst.prob_of_appearing() / 4] * 4
+        assert probs[0] == 1 - sum([obst.prob_of_appearing() / 4] * 4)
 
 
 @pytest.mark.parametrize("action", ACTIONS)
@@ -86,7 +90,8 @@ def test_number_of_successors_invisible_obstacle_and_variable_speeds(
     headlight_range = 2
     road_test = Road(headlight_range, Car(1, speed), [obst])
     probs = [prob for next_state, prob, reward in road_test.successors(action)]
-    assert len(probs) == 4 * speed + 1
+    assert (len(probs) ==
+            4 * max(0, speed - int(action == LEFT or action == RIGHT)) + 1)
 
 
 def test_car_can_only_overdrive_headlights_by_one_unit():
