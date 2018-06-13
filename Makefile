@@ -14,6 +14,10 @@ test: setup.py
 test-cov: ARGS=--cov $(LIB_NAME) --cov-report term:skip-covered
 test-cov: test
 
+.PHONY: testv
+testv: ARGS=-rvxXs
+testv: test
+
 .PHONY: install
 install: requirements.txt
 	$(PIP) install -r requirements.txt $(ARGS)
