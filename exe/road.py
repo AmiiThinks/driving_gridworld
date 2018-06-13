@@ -17,7 +17,6 @@ def main(num_rows=5,
          num_bumps=3,
          num_pedestrians=3,
          speed=1,
-         speed_limit=3,
          num_steps=100,
          ui=False):
     np.random.seed(42)
@@ -26,22 +25,19 @@ def main(num_rows=5,
     num_bumps = int(num_bumps)
     num_pedestrians = int(num_pedestrians)
     speed = int(speed)
-    speed_limit = int(speed_limit)
     num_steps = int(num_steps)
     ui = bool(ui)
 
     if ui:
-        from driving_gridworld.ui_road_pycolab_env import UiDrivingGridworld
+        from driving_gridworld.human_ui import UiDrivingGridworld
 
-        game = UiDrivingGridworld(num_rows, num_bumps, num_pedestrians, speed,
-                                speed_limit)
+        game = UiDrivingGridworld(num_rows, num_bumps, num_pedestrians, speed)
 
         game.ui_play()
     else:
-        from driving_gridworld.road_pycolab_env import DrivingGridworld
+        from driving_gridworld.gridworld import DrivingGridworld
 
-        game = DrivingGridworld(num_rows, num_bumps, num_pedestrians, speed,
-                              speed_limit)
+        game = DrivingGridworld(num_rows, num_bumps, num_pedestrians, speed)
 
         observation, _, __ = game.its_showtime()
 
