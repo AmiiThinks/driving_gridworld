@@ -12,8 +12,8 @@ class Obstacle(object):
     def reward_for_collision(self, speed):
         raise NotImplementedError()
 
-    def next(self, car):
-        return self.__class__(self.row + car.speed, self.col)
+    def next(self, distance):
+        return self.__class__(self.row + distance, self.col)
 
     def __str__(self):
         raise NotImplementedError()

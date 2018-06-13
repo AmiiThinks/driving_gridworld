@@ -109,6 +109,7 @@ class Road(object):
                    state. The reward function is deterministic.
         '''
 
+        distance = self._car.progress_toward_destination(action)
         next_car = self._car.next(action, self.speed_limit())
 
         for positions, reveal_indices in (
@@ -131,7 +132,7 @@ class Road(object):
                     prob *= p / float(num_avail_spaces_given_revealed_obs)
                     num_obstacles_revealed += 1
                 else:
-                    next_obstacle = obs.next(self._car)
+                    next_obstacle = obs.next(distance)
                     prob *= 1.0 - p
                 next_obstacles.append(next_obstacle)
 
@@ -150,11 +151,11 @@ class Road(object):
                     if collision_occurred:
                         reward += next_obstacle.reward_for_collision(
                             self._car.speed)
-            reward += self._car.reward()
+            reward += self._car.reward(action)
 
             car_is_off_road = self._car.col == 0 or self._car.col == 3
             if car_is_off_road:
-                reward -= 4 * self._car.speed
+                reward -= 2 * distance * self._car.speed
 
             next_road = self.__class__(self._headlight_range, next_car,
                                        next_obstacles)

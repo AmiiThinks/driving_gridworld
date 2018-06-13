@@ -39,8 +39,11 @@ class Car(object):
             raise ValueError('Unrecognized action, "{}".'.format(action))
         return Car(col, speed)
 
-    def reward(self):
-        return float(self.speed)
+    def progress_toward_destination(self, action):
+        return max(self.speed - int(action == LEFT or action == RIGHT), 0)
+
+    def reward(self, action):
+        return float(self.progress_toward_destination(action))
 
     def __str__(self):
         return 'C'

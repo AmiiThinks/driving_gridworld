@@ -3,7 +3,7 @@ from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
-from driving_gridworld.actions import ACTIONS, RIGHT, NO_OP
+from driving_gridworld.actions import ACTIONS, RIGHT, NO_OP, LEFT
 import pytest
 
 
@@ -56,7 +56,8 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
 def test_driving_faster_gives_a_larger_reward(action, current_speed):
     road_test = Road(4, Car(1, current_speed))
     for next_state, prob, reward in road_test.successors(action):
-        assert reward == current_speed - 1.0
+        assert reward == current_speed - 1.0 - int(action == LEFT
+                                                   or action == RIGHT)
 
 
 def test_road_cannot_start_with_car_going_faster_than_speed_limit():
@@ -246,7 +247,7 @@ def test_car_appears_over_dirt_and_pavement(col):
 def test_turning_into_an_obstacle_causes_a_collision(row):
     bumps = [Bump(row, 2)]
     headlight_range = 1
-    car = Car(1, 1)
+    car = Car(1, 2)
     patient = Road(headlight_range, car, bumps)
 
     successors = list(patient.successors(RIGHT))
@@ -254,7 +255,7 @@ def test_turning_into_an_obstacle_causes_a_collision(row):
     s, p, r = successors[0]
 
     assert p == 1.0
-    assert r == bumps[0].reward_for_collision(car.speed) + car.speed - 1.0
+    assert r == bumps[0].reward_for_collision(car.speed) + car.speed - 1 - 1.0
 
     successors = list(patient.successors(NO_OP))
     assert len(successors) == 1
