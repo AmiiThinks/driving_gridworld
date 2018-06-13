@@ -21,7 +21,8 @@ class Car(object):
         self.col = col
         self.speed = speed
 
-    def position(self): return (self.row, self.col)
+    def position(self):
+        return (self.row, self.col)
 
     def next(self, action, speed_limit):
         assert speed_limit > 0
@@ -36,7 +37,7 @@ class Car(object):
         elif action == NO_OP:
             return Car(self.row, self.col, self.speed)
         else:
-            raise 'Unrecognized action, "{}".'.format(action)
+            raise ValueError('Unrecognized action, "{}".'.format(action))
 
     def reward(self):
         return float(self.speed)
