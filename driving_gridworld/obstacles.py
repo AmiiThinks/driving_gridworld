@@ -33,6 +33,9 @@ class Obstacle(object):
     def __str__(self):
         raise NotImplementedError()
 
+    def to_byte(self, encoding='ascii'):
+        return bytes(str(self), encoding)[0]
+
 
 class Bump(Obstacle):
     def prob_of_appearing(self):

@@ -142,6 +142,10 @@ def combinations(iterable, r, collection=tuple):
         yield collection(iterable[i] for i in indices)
 
 
+def _byte(c, encoding='ascii'):
+    return bytes(c, encoding)[0]
+
+
 class Road(object):
     def __init__(self, num_rows, car, obstacles):
         if num_rows + 1 < car.speed:
@@ -308,3 +312,6 @@ class Road(object):
         layers[' '] = np.logical_not(full_layer)
 
         return layers
+
+    def board(self):
+        return sum([_byte(c) * layer for c, layer in self.layers().items()])

@@ -185,12 +185,50 @@ def test_layers():
     np.testing.assert_array_equal(patient['d'], x_ditch_layer)
 
     x_empty_layer = np.logical_not(
-        np.logical_or(
-            x_ditch_layer,
-            np.logical_or(
-                np.logical_or(x_bump_layer, x_pedestrian_layer),
-                np.logical_or(x_car_layer, x_wall_layer)
-            )
-        )
-    )
+        np.logical_or(x_ditch_layer,
+                      np.logical_or(
+                          np.logical_or(x_bump_layer, x_pedestrian_layer),
+                          np.logical_or(x_car_layer, x_wall_layer))))
     np.testing.assert_array_equal(patient[' '], x_empty_layer)
+
+
+def byte(c, encoding='ascii'):
+    return bytes(c, encoding)[0]
+
+
+def test_board():
+    bumps = [Bump(-1, -1), Bump(0, 0), Bump(1, 3)]
+    pedestrians = [Pedestrian(-1, -1), Pedestrian(0, 1), Pedestrian(1, 2)]
+    headlight_range = 4
+    patient = Road(headlight_range, Car(0, 1, 1), bumps + pedestrians).board()
+
+    x_bump_layer = np.full([headlight_range, 6], False)
+    x_bump_layer[0, 1] = True
+    x_bump_layer[1, 4] = True
+
+    x_pedestrian_layer = np.full([headlight_range, 6], False)
+    x_pedestrian_layer[0, 2] = True
+    x_pedestrian_layer[1, 3] = True
+
+    x_car_layer = np.full([headlight_range, 6], False)
+    x_car_layer[0, 1 + 1] = True
+
+    x_wall_layer = np.full([headlight_range, 6], False)
+    x_wall_layer[:, 0] = True
+    x_wall_layer[:, -1] = True
+
+    x_ditch_layer = np.full([headlight_range, 6], False)
+    x_ditch_layer[:, 1] = True
+    x_ditch_layer[:, -2] = True
+
+    x_empty_layer = np.logical_not(
+        np.logical_or(x_ditch_layer,
+                      np.logical_or(
+                          np.logical_or(x_bump_layer, x_pedestrian_layer),
+                          np.logical_or(x_car_layer, x_wall_layer))))
+
+    x_board = (x_empty_layer * byte(' ') + x_bump_layer * byte('b') +
+               x_pedestrian_layer * byte('p') + x_wall_layer * byte('|') +
+               x_ditch_layer * byte('d') + x_car_layer * byte('C'))
+
+    np.testing.assert_array_equal(patient, x_board)
