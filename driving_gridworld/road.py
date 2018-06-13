@@ -188,7 +188,7 @@ class Road(object):
         an_obstacle_could_appear = space_is_available and distance > 0
         this_obstacle_could_appear = (an_obstacle_could_appear and
                                       self.obstacle_outside_car_path(obstacle))
-        return (obstacle.prob_of_appearing()
+        return (obstacle.prob_of_appearing
                 if this_obstacle_could_appear else 0)
 
     def car_layer(self):

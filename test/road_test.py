@@ -51,8 +51,8 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
             assert 0.0 <= probs[i] <= 1.0
             sum_probs += probs[i]
         assert sum_probs == pytest.approx(1.0)
-        assert probs[1:] == [obst.prob_of_appearing() / 4] * 4
-        assert probs[0] == 1 - sum([obst.prob_of_appearing() / 4] * 4)
+        assert probs[1:] == [obst.prob_of_appearing / 4] * 4
+        assert probs[0] == 1 - sum([obst.prob_of_appearing / 4] * 4)
 
 
 @pytest.mark.parametrize("action", ACTIONS)

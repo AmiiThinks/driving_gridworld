@@ -1,13 +1,11 @@
 class Obstacle(object):
-    def __init__(self, row, col):
+    def __init__(self, row, col, prob_of_appearing=0.2):
         self.row = row
         self.col = col
+        self.prob_of_appearing = prob_of_appearing
 
     def position(self):
         return (self.row, self.col)
-
-    def prob_of_appearing(self):
-        raise NotImplementedError()
 
     def reward_for_collision(self, speed):
         raise NotImplementedError()
@@ -23,9 +21,6 @@ class Obstacle(object):
 
 
 class Bump(Obstacle):
-    def prob_of_appearing(self):
-        return 0.1
-
     def reward_for_collision(self, speed):
         return -2 * speed
 
@@ -34,9 +29,6 @@ class Bump(Obstacle):
 
 
 class Pedestrian(Obstacle):
-    def prob_of_appearing(self):
-        return 0.05
-
     def reward_for_collision(self, speed):
         return -8e2**speed
 
