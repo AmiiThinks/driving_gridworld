@@ -229,7 +229,9 @@ class Road(object):
                 obs = self._obstacles[i]
                 p = self.prob_obstacle_appears(obs, num_obstacles_revealed)
                 assert p <= 1
-                if i in reveal_indices:
+
+                obs_is_revealed = i in reveal_indices
+                if obs_is_revealed:
                     next_obstacle = obs.__class__(
                         *positions[num_obstacles_revealed])
                     num_avail_spaces_given_revealed_obs = (
@@ -240,10 +242,24 @@ class Road(object):
                     next_obstacle = obs.next(self._car)
                     prob *= 1.0 - p
                 next_obstacles.append(next_obstacle)
-                reward += next_obstacle.reward(self._car)
+
+                if next_obstacle.col == next_car.col:
+                    obstacle_was_in_front_of_car = (obs.row < self._car.row
+                                                    or obs_is_revealed)
+                    car_changed_lanes = self._car.col != next_car.col
+                    car_moved_into_or_past_obstacle = (
+                        (obstacle_was_in_front_of_car or car_changed_lanes)
+                        and next_obstacle.row >= next_car.row)
+
+                    if car_moved_into_or_past_obstacle:
+                        reward += next_obstacle.reward_for_collision(
+                            self._car.speed)
             reward += self._car.reward()
-            if self._car.col == 0 or self._car.col == 3:
+
+            car_is_off_road = self._car.col == 0 or self._car.col == 3
+            if car_is_off_road:
                 reward -= 4 * self._car.speed
+
             next_road = self.__class__(self._num_rows, next_car,
                                        next_obstacles)
             yield (next_road, prob, reward)
@@ -318,11 +334,9 @@ class Road(object):
     def ordered_layers(self):
         obstacle_layers = self.obstacle_layers()
 
-        layers = [
-            (' ', np.full([self._num_rows, 6], False)),
-            ('|', self.wall_layer()),
-            ('d', self.ditch_layer())
-        ] + list(obstacle_layers.items())
+        layers = [(' ', np.full([self._num_rows, 6], False)),
+                  ('|', self.wall_layer()),
+                  ('d', self.ditch_layer())] + list(obstacle_layers.items())
         layers.append((str(self._car), self.car_layer()))
 
         for i in range(1, len(layers)):

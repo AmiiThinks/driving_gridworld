@@ -3,7 +3,7 @@ from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
-from driving_gridworld.actions import ACTIONS
+from driving_gridworld.actions import ACTIONS, RIGHT, NO_OP
 import pytest
 
 
@@ -250,3 +250,25 @@ def test_car_appears_over_dirt_and_pavement(col):
     c = Car(0, col, 1)
     patient = Road(headlight_range, c, bumps).board()
     assert patient[0, col + 1] == c.to_byte()
+
+
+@pytest.mark.parametrize('row', [0, 1])
+def test_turning_into_an_obstacle_causes_a_collision(row):
+    bumps = [Bump(row, 2)]
+    headlight_range = 2
+    car = Car(1, 1, 1)
+    patient = Road(headlight_range, car, bumps)
+
+    successors = list(patient.successors(RIGHT))
+    assert len(successors) == 1
+    s, p, r = successors[0]
+
+    assert p == 1.0
+    assert r == bumps[0].reward_for_collision(car.speed) + car.speed
+
+    successors = list(patient.successors(NO_OP))
+    assert len(successors) == 1
+    s, p, r = successors[0]
+
+    assert p == 1.0
+    assert r == car.speed
