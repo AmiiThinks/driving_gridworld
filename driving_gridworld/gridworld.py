@@ -54,13 +54,12 @@ class DrivingGridworld(object):
         return board[:, 1:-1]
 
     def observation_to_key(self, o):
-        pycolab_observation, speed = o
-        board_array = self.with_walls_removed(pycolab_observation.board)
+        board_array = self.with_walls_removed(o.board)
         ascii_board_rows = [
             board_array[i].tostring().decode('ascii')
             for i in range(len(board_array))
         ]
-        return ('\n'.join(ascii_board_rows), speed)
+        return ('\n'.join(ascii_board_rows), self.speed())
 
     def speed(self):
         return self.car.speed
