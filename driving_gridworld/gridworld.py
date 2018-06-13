@@ -47,8 +47,12 @@ class DrivingGridworld(object):
             # TODO: Show controls
             return self.play(NO_OP)
         else:
-            self.road, reward = self.road.sample_transition(a)
-            return self.road.observation(), reward, self._discount
+            road, reward, discount = self.fast_play(a)
+            return road.observation(), reward, discount
+
+    def fast_play(self, a):
+        self.road, reward = self.road.sample_transition(a)
+        return self.road, reward, self._discount
 
     def with_walls_removed(self, board):
         return board[:, 1:-1]
