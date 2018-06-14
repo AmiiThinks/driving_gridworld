@@ -67,3 +67,22 @@ class DrivingGridworld(object):
 
     def speed(self):
         return self.car.speed
+
+
+class RecordingDrivingGridworld(DrivingGridworld):
+    def __init__(self, *args, **kwargs):
+        self._recorded = []
+        super().__init__(*args, **kwargs)
+
+    def recorded(self):
+        return self._recorded
+
+    def its_showtime(self):
+        observation, reward, discount = super().its_showtime()
+        self._recorded = [(self.road.copy(), reward, discount)]
+        return observation, reward, discount
+
+    def play(self, action):
+        observation, reward, discount = super().play(action)
+        self._recorded.append((self.road.copy(), reward, discount, action))
+        return observation, reward, discount

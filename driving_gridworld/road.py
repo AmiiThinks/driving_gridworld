@@ -43,6 +43,14 @@ class Road(object):
         self._obstacles = obstacles
         self._available_spaces = set()
 
+    def __eq__(self, other):
+        return (
+            self._headlight_range == other._headlight_range
+            and self._num_lanes == other._num_lanes
+            and self._car == other._car
+            and self._obstacles == other._obstacles
+            and self._available_spaces == other._available_spaces)
+
     def copy(self):
         return self.__class__(self._headlight_range, self._car,
                               self._obstacles)

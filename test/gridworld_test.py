@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from driving_gridworld.gridworld import DrivingGridworld
+from driving_gridworld.gridworld import DrivingGridworld, RecordingDrivingGridworld
 from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS
 
 
@@ -67,3 +67,14 @@ def test_initial_observation():
              [False, False,  True,  True, False, False],
              [False, False,  True, False, False, False]])
     )  # yapf:disable
+
+
+def test_recording_gridworld_creation():
+    patient = RecordingDrivingGridworld()
+    assert patient.recorded() == []
+    observation, reward, discount = patient.its_showtime()
+    expected_recorded = [(patient.road.copy(), reward, discount)]
+    assert patient.recorded() == expected_recorded
+    observation, reward, discount = patient.play(0)
+    expected_recorded.append((patient.road.copy(), reward, discount, 0))
+    assert patient.recorded() == expected_recorded
