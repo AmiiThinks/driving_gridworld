@@ -117,3 +117,4 @@ results/
 .git
 .DS_Store
 .pytest_cache/
+.build
