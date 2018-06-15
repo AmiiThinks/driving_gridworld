@@ -8,7 +8,7 @@ import curses
 from pycolab import human_ui
 
 from .actions import UP, DOWN, LEFT, RIGHT, NO_OP, QUIT, LIST_CONTROLS
-from .gridworld import DrivingGridworld
+from .gridworld import RecordingDrivingGridworld
 
 
 def color256_to_1000(c):
@@ -27,7 +27,7 @@ COLOUR_FG = {
 COLOUR_BG = {}
 
 
-class UiDrivingGridworld(DrivingGridworld):
+class UiRecordingDrivingGridworld(RecordingDrivingGridworld):
     def ui_play(self):
         ui = human_ui.CursesUi(
             keys_to_actions={
