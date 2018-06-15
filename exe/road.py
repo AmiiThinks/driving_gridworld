@@ -25,7 +25,8 @@ def main(headlight_range=5,
          speed=1,
          num_steps=100,
          ui=False,
-         recording_path=None):
+         recording_path=None,
+         discount=0.99):
     np.random.seed(42)
 
     headlight_range = int(headlight_range)
@@ -38,15 +39,23 @@ def main(headlight_range=5,
     if ui:
         from driving_gridworld.human_ui import UiRecordingDrivingGridworld
 
-        game = UiRecordingDrivingGridworld(headlight_range, num_bumps,
-                                           num_pedestrians, speed)
+        game = UiRecordingDrivingGridworld(
+            headlight_range,
+            num_bumps,
+            num_pedestrians,
+            speed,
+            discount=discount)
 
         game.ui_play()
     else:
         from driving_gridworld.gridworld import RecordingDrivingGridworld
 
-        game = RecordingDrivingGridworld(headlight_range, num_bumps,
-                                         num_pedestrians, speed)
+        game = RecordingDrivingGridworld(
+            headlight_range,
+            num_bumps,
+            num_pedestrians,
+            speed,
+            discount=discount)
 
         observation, _, __ = game.its_showtime()
 
