@@ -168,14 +168,14 @@ class Road(object):
                             self._car.speed)
             reward += self._car.reward(action)
 
-            if self.is_of_road():
+            if self.is_off_road():
                 reward -= 2 * distance * self._car.speed
 
             next_road = self.__class__(self._headlight_range, next_car,
                                        next_obstacles)
             yield (next_road, prob, reward)
 
-    def is_of_road(self):
+    def is_off_road(self):
         return self._car.col == 0 or self._car.col == 3
 
     def to_key(self):
