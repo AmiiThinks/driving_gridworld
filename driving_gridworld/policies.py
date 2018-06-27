@@ -1,5 +1,4 @@
 import numpy as np
-from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.actions import UP, DOWN, RIGHT, LEFT, NO_OP
@@ -25,7 +24,7 @@ def hand_coded_score_for_columns_adjacent_to_car(road):
         scores[1] = -2
 
     for obst in road._obstacles:
-        if not road.obstacle_outside_car_path(obst):
+        if road.obstacle_is_visible(obst):
             delta = abs(obst.col - road._car.col)
             if delta < 2:
                 i = obst.col - road._car.col + 1

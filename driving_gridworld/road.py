@@ -282,31 +282,3 @@ class Road(object):
 
     def obstacle_is_visible(self, obs):
         return not self.obstacle_outside_car_path(obs) and obs.row >= 0
-
-    def obstacles_part_of_a_collision(self, action):
-        raise Exception("unfinished")
-        next_car = self._car.next(action, self.speed_limit())
-        for i in range(len(self._obstacles)):
-            list_obstacles_that_collided = []
-            list_indices_obstacles_that_collided = []
-            obs = self._obstacles[i]
-            next_obstacle = self._obstacles[i]
-            if next_obstacle.col == next_car.col:
-                obstacle_was_in_front_of_car = (obs.row < self._car_row()
-                                                or obs_is_revealed)
-                car_ran_over_obstacle = (
-                    obstacle_was_in_front_of_car
-                    and next_obstacle.row >= self._car_row())
-                car_changed_lanes = self._car.col != next_car.col
-                car_changed_lanes_into_obstacle = (
-                    car_changed_lanes and self._car_row() == obs.row)
-                collision_occurred = (car_changed_lanes_into_obstacle
-                                      or car_ran_over_obstacle)
-                if collision_occurred:
-                    list_obstacles_that_collided.append(obs)
-                    idx = self._obstacles.index(obs)
-                    list_indices_obstacles_that_collided.append(idx)
-                    # BUG: if the same obstacle appears more than once, the first idx will be appended
-                    # CONFIRM: the same obstacle cannot appear more than once, b/c they would overlap (?)
-            return (
-                list_obstacles_that_collided, list_indices_obstacles_that_collided)

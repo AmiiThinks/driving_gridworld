@@ -304,15 +304,3 @@ def test_to_key():
     patient = Road(headlight_range, car, obstacles).to_key()
     assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
                                                                    2)]))
-
-
-@pytest.mark.skip("Unfinished. If we are looping over obstacles -> we need more than one obstacle?")
-@pytest.mark.parametrize("action", ACTIONS)
-def test_obstacles_part_of_collision(action):
-    obst = Bump(1, 0)
-    headlight_range = 4
-    car = Car(1, 2)
-    list_obstacles_collided, list_indices = Road(
-        headlight_range, Car(1, 1), [obst]).obstacles_part_of_a_collision(action)
-    print(list_obstacles_collided)
-    print(list_indices)
