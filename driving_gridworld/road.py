@@ -3,7 +3,9 @@ import numpy as np
 from pycolab.rendering import Observation
 
 from .car import car_row_array
-
+from driving_gridworld.obstacles import Bump
+from driving_gridworld.obstacles import Pedestrian
+#from driving_gridworld.car import Car
 
 def combinations(iterable, r, collection=tuple):
     '''`r`-size `collection`s of elements in `iterable`.'''
@@ -78,6 +80,42 @@ class Road(object):
     def obstacle_outside_car_path(self, obstacle):
         return (obstacle.col < 0 or obstacle.col >= self._num_lanes
                 or obstacle.row > self._headlight_range)
+
+    def obstacle_score(self, obst):
+        if isinstance(obst, Pedestrian):
+            return -2 * self._headlight_range
+        elif isinstance(obst, Bump):
+            return -1
+        else:
+            return 0
+
+    def score_for_columns_adjacent_to_car(self):
+        adj_cols_idx = list(
+            range(max(0, self._car.col-1), min(self._car.col+2, 4)))
+        scores = [0] * len(adj_cols_idx)
+
+        if self._car.col == 0:
+            scores.insert(0, -np.inf)
+            scores[1] = -2
+
+        elif self._car.col == 1:
+            scores[0] = -2
+
+        elif self._car.col == 2:
+            scores[2] = -2
+
+        else:
+            scores.append(-np.inf)
+            scores[1] = -2
+
+        for obst in self._obstacles:
+            delta = abs(obst.col - self._car.col)
+            if delta >= 2:
+                continue
+            else:
+                scores[obst.col - self._car.col + 1] += self.obstacle_score(
+                    obst)
+        return scores
 
     def every_combination_of_revealed_obstacles(self, distance):
         self._available_spaces = set()
@@ -283,3 +321,31 @@ class Road(object):
 
     def obstacle_is_visible(self, obs):
         return not self.obstacle_outside_car_path(obs) and obs.row >= 0
+
+    def obstacles_part_of_a_collision(self, action):
+        raise Exception("unfinished")
+        next_car = self._car.next(action, self.speed_limit())
+        for i in range(len(self._obstacles)):
+            list_obstacles_that_collided = []
+            list_indices_obstacles_that_collided = []
+            obs = self._obstacles[i]
+            next_obstacle = self._obstacles[i]
+            if next_obstacle.col == next_car.col:
+                obstacle_was_in_front_of_car = (obs.row < self._car_row()
+                                                or obs_is_revealed)
+                car_ran_over_obstacle = (
+                    obstacle_was_in_front_of_car
+                    and next_obstacle.row >= self._car_row())
+                car_changed_lanes = self._car.col != next_car.col
+                car_changed_lanes_into_obstacle = (
+                    car_changed_lanes and self._car_row() == obs.row)
+                collision_occurred = (car_changed_lanes_into_obstacle
+                                      or car_ran_over_obstacle)
+                if collision_occurred:
+                    list_obstacles_that_collided.append(obs)
+                    idx = self._obstacles.index(obs)
+                    list_indices_obstacles_that_collided.append(idx)
+                    # BUG: if the same obstacle appears more than once, the first idx will be appended
+                    # CONFIRM: the same obstacle cannot appear more than once, b/c they would overlap (?)
+            return (
+                list_obstacles_that_collided, list_indices_obstacles_that_collided)

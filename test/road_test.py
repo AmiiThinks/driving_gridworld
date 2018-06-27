@@ -306,3 +306,87 @@ def test_to_key():
 
     assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
                                                                    2)]))
+
+# TODO: if we are looping over obstacles -> we need more than one obstacle...?
+@pytest.mark.skip("unfinished")
+@pytest.mark.parametrize("action", ACTIONS)
+def test_obstacles_part_of_collision(action):
+    obst = Bump(1, 0)
+    headlight_range = 4
+    car = Car(1, 2)
+    list_obstacles_collided, list_indices = Road(
+        headlight_range, Car(1, 1), [obst]).obstacles_part_of_a_collision(action)
+    print(list_obstacles_collided)
+    print(list_indices)
+
+
+@pytest.mark.parametrize("obst_class", [Bump, Pedestrian])
+@pytest.mark.parametrize("car_col", [0, 1, 2, 3])
+def test_scores_obst_more_than_1_col_away(obst_class, car_col):
+    headlight_range = 4
+
+    for i in [2, 3]:
+        obst_col = (car_col + i) % 5
+        obst = obst_class(0, obst_col)
+        scores = Road(headlight_range, Car(car_col, 1), [obst]).score_for_columns_adjacent_to_car()
+
+        if car_col == 0:
+            assert scores == [-np.inf, -2, 0]
+        elif car_col == 1:
+            assert scores == [-2, 0, 0]
+        elif car_col == 2:
+            assert scores == [0, 0, -2]
+        else:
+            assert scores == [0, -2, -np.inf]
+
+
+@pytest.mark.parametrize("obst_class", [Bump, Pedestrian])
+@pytest.mark.parametrize("car_col", [0, 1, 2, 3])
+def test_scores_obst_1_col_away_left(obst_class, car_col):
+    headlight_range = 4
+    obst = obst_class(0, car_col - 1)
+    road = Road(headlight_range, Car(car_col, 1), [obst])
+    score = road.obstacle_score(obst)
+    scores = road.score_for_columns_adjacent_to_car()
+    if car_col == 0:
+        assert scores == [-np.inf, -2, 0]
+    elif car_col == 1:
+        assert scores == [-2 + score, 0, 0]
+    elif car_col == 2:
+        assert scores == [score, 0, -2]
+    else:
+        assert scores == [score, -2, -np.inf]
+
+@pytest.mark.parametrize("obst_class", [Bump, Pedestrian])
+@pytest.mark.parametrize("car_col", [0, 1, 2, 3])
+def test_scores_obst_1_col_away_right(obst_class, car_col):
+    headlight_range = 4
+    obst = obst_class(0, car_col + 1)
+    road = Road(headlight_range, Car(car_col, 1), [obst])
+    score = road.obstacle_score(obst)
+    scores = road.score_for_columns_adjacent_to_car()
+    if car_col == 0:
+        assert scores == [-np.inf, -2, score]
+    elif car_col == 1:
+        assert scores == [-2, 0, score]
+    elif car_col == 2:
+        assert scores == [0, 0, -2 + score]
+    else:
+        assert scores == [0, -2, -np.inf]
+
+@pytest.mark.parametrize("obst_class", [Bump, Pedestrian])
+@pytest.mark.parametrize("car_col", [0, 1, 2, 3])
+def test_scores_obst_same_col_as_car(obst_class, car_col):
+    headlight_range = 4
+    obst = obst_class(0, car_col)
+    road = Road(headlight_range, Car(car_col, 1), [obst])
+    score = road.obstacle_score(obst)
+    scores = road.score_for_columns_adjacent_to_car()
+    if car_col == 0:
+        assert scores == [-np.inf, -2 + score, 0]
+    elif car_col == 1:
+        assert scores == [-2, score, 0]
+    elif car_col == 2:
+        assert scores == [0, score, -2]
+    else:
+        assert scores == [0, -2 + score, -np.inf]
