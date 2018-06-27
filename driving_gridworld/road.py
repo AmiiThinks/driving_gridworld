@@ -109,12 +109,11 @@ class Road(object):
             scores[1] = -2
 
         for obst in self._obstacles:
-            delta = abs(obst.col - self._car.col)
-            if delta >= 2:
-                continue
-            else:
-                scores[obst.col - self._car.col + 1] += self.obstacle_score(
-                    obst)
+            if not self.obstacle_outside_car_path(obst):
+                delta = abs(obst.col - self._car.col)
+                if delta < 2:
+                    scores[obst.col - self._car.col + 1] += self.obstacle_score(
+                        obst)
         return scores
 
     def every_combination_of_revealed_obstacles(self, distance):

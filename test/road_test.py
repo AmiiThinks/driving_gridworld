@@ -289,7 +289,6 @@ def test_to_key():
     headlight_range = 1
     car = Car(2, 1)
     patient = Road(headlight_range, car, bumps).to_key()
-
     assert patient == (2, 1, frozenset([('b', 0, 2)]))
 
     obstacles = [
@@ -303,12 +302,11 @@ def test_to_key():
     headlight_range = 1
     car = Car(2, 1)
     patient = Road(headlight_range, car, obstacles).to_key()
-
     assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
                                                                    2)]))
 
-# TODO: if we are looping over obstacles -> we need more than one obstacle...?
-@pytest.mark.skip("unfinished")
+
+@pytest.mark.skip("Unfinished. If we are looping over obstacles -> we need more than one obstacle?")
 @pytest.mark.parametrize("action", ACTIONS)
 def test_obstacles_part_of_collision(action):
     obst = Bump(1, 0)
@@ -357,6 +355,7 @@ def test_scores_obst_1_col_away_left(obst_class, car_col):
     else:
         assert scores == [score, -2, -np.inf]
 
+
 @pytest.mark.parametrize("obst_class", [Bump, Pedestrian])
 @pytest.mark.parametrize("car_col", [0, 1, 2, 3])
 def test_scores_obst_1_col_away_right(obst_class, car_col):
@@ -373,6 +372,7 @@ def test_scores_obst_1_col_away_right(obst_class, car_col):
         assert scores == [0, 0, -2 + score]
     else:
         assert scores == [0, -2, -np.inf]
+
 
 @pytest.mark.parametrize("obst_class", [Bump, Pedestrian])
 @pytest.mark.parametrize("car_col", [0, 1, 2, 3])
