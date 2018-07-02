@@ -1,7 +1,6 @@
 from itertools import product, permutations
 import numpy as np
 from pycolab.rendering import Observation
-
 from .car import car_row_array
 
 

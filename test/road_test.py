@@ -289,7 +289,6 @@ def test_to_key():
     headlight_range = 1
     car = Car(2, 1)
     patient = Road(headlight_range, car, bumps).to_key()
-
     assert patient == (2, 1, frozenset([('b', 0, 2)]))
 
     obstacles = [
@@ -303,6 +302,5 @@ def test_to_key():
     headlight_range = 1
     car = Car(2, 1)
     patient = Road(headlight_range, car, obstacles).to_key()
-
     assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
                                                                    2)]))
