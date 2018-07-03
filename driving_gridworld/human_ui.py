@@ -1,11 +1,7 @@
-"""A simple driving simulator.
-
-Command-line usage: `road.py`.
-
-Keys: left, right - move. up, down - speed up or down, respectively. q - quit.
-"""
 import curses
 from pycolab import human_ui
+from pycolab.rendering import ObservationToArray
+import numpy as np
 
 from .actions import UP, DOWN, LEFT, RIGHT, NO_OP, QUIT, LIST_CONTROLS
 from .gridworld import RecordingDrivingGridworld
@@ -15,7 +11,6 @@ def color256_to_1000(c):
     return int(c / 255.0 * 999)
 
 
-# These colours are only for humans to see in the CursesUi.
 COLOUR_FG = {
     ' ': (color256_to_1000(183), color256_to_1000(177), color256_to_1000(174)),
     '|': (color256_to_1000(67), color256_to_1000(70), color256_to_1000(75)),
@@ -25,6 +20,11 @@ COLOUR_FG = {
     'p': (987, 623, 145)
 }
 COLOUR_BG = {}
+obs_to_rgb = ObservationToArray(COLOUR_FG)
+
+
+def observation_to_img(o):
+    return np.swapaxes(obs_to_rgb(o) / 1000.0, 1, 2).T
 
 
 class UiRecordingDrivingGridworld(RecordingDrivingGridworld):

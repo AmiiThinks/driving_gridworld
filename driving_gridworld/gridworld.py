@@ -1,7 +1,7 @@
-from .road import Road
-from .obstacles import Bump, Pedestrian
-from .car import Car
-from .actions import QUIT, NO_OP, LIST_CONTROLS
+from driving_gridworld.road import Road
+from driving_gridworld.obstacles import Bump, Pedestrian
+from driving_gridworld.car import Car
+from driving_gridworld.actions import QUIT, NO_OP, LIST_CONTROLS
 from collections import namedtuple
 
 
