@@ -225,7 +225,7 @@ class Road(object):
 
     def speedometer_layer(self):
         layer = np.full([self._num_rows(), self._world_width], False)
-        layer[-self._car.speed:, -1] = True
+        layer[self.speed_limit() - self._car.speed:, -1] = True
         return layer
 
     def obstacle_layers(self):

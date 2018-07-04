@@ -64,14 +64,6 @@ def test_driving_faster_gives_a_larger_reward(action, current_speed):
                                                    or action == RIGHT)
 
 
-def test_road_cannot_start_with_car_going_faster_than_speed_limit():
-    headlight_range = 4
-    current_speed = 6
-    car = Car(0, current_speed)
-    with pytest.raises(ValueError):
-        Road(headlight_range, car)
-
-
 @pytest.mark.parametrize("car", [Car(0, 1), Car(3, 1)])
 @pytest.mark.parametrize("action", ACTIONS)
 def test_receive_negative_reward_for_driving_off_the_road(car, action):
@@ -135,6 +127,15 @@ def test_ditch_layer(headlight_range):
     x[:, 1] = True
     x[:, -3] = True
     np.testing.assert_array_equal(patient.ditch_layer(), x)
+
+
+@pytest.mark.parametrize('speed', range(4))
+def test_speedometer_layer(speed):
+    headlight_range = 4
+    patient = Road(headlight_range, Car(1, speed=speed), [])
+    x = np.full([headlight_range + 1, 7], False)
+    x[headlight_range + 1 - speed:, -1] = True
+    np.testing.assert_array_equal(patient.speedometer_layer(), x)
 
 
 def test_obstacle_layers():
