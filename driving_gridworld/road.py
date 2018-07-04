@@ -67,7 +67,7 @@ class Road(object):
 
         Set according to the headlight range since overdriving the
         headlights too much breaks the physical plausibility of the game
-        due to the way we reusing obstacles to simulate arbitrarily long
+        due to the way obstacles are reused to simulate arbitrarily long
         roads with many obstacles. This is not too much of a restriction
         though because even overdriving the headlights by one unit is
         completely unsafe.
