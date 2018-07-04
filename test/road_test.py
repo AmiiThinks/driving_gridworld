@@ -327,6 +327,7 @@ def test_to_key():
     car = Car(2, 1)
     patient = Road(headlight_range, car, obstacles).to_key()
     assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
+
                                                                    2)]))
 
 

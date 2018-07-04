@@ -31,10 +31,10 @@ class Car(object):
             speed = max(self.speed - 1, 0)
         elif action == LEFT:
             if self.speed > 0:
-                col = max(self.col - 1, 0)
+                col = self.col - 1
         elif action == RIGHT:
             if self.speed > 0:
-                col = min(self.col + 1, 3)
+                col = self.col + 1
         elif action != NO_OP:
             raise ValueError('Unrecognized action, "{}".'.format(action))
         return Car(col, speed)
