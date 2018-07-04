@@ -112,6 +112,9 @@ class Road(object):
                 assert len(positions) == len(reveal_indices)
                 yield positions, reveal_indices
 
+    def reward_for_being_in_transit(self):
+        return -1.0
+
     def successors(self, action):
         '''Generates successor, probability, reward tuples.
 
@@ -122,9 +125,16 @@ class Road(object):
             float: The reward given the current state, action, and successor
                    state. The reward function is deterministic.
         '''
+        if not self.has_crashed():
+            distance = self._car.progress_toward_destination(action)
+        else:
+            distance = 0
 
         distance = self._car.progress_toward_destination(action)
         next_car = self._car.next(action, self.speed_limit())
+        if self.has_crashed(next_car):
+            next_car.speed = 0
+
         revealed_obstacles = (
             self.every_combination_of_revealed_obstacles(distance)
             if distance > 0 else [(None, set())])
@@ -133,6 +143,8 @@ class Road(object):
             prob = 1.0
             num_obstacles_revealed = 0
             next_obstacles = []
+            reward = self.reward_for_being_in_transit()
+
             reward = -1.0
             for i in range(len(self._obstacles)):
                 obs = self._obstacles[i]
@@ -179,6 +191,12 @@ class Road(object):
 
     def is_off_road(self):
         return self._car.col <= 0 or self._car.col >= 3
+
+    def has_crashed(self, car=None):
+        if car == None:
+            return self._car.col < 0 or self._car.col > 3
+        else:
+            return car.col < 0 or car.col > 3    
 
     def to_key(self):
         obstacles = []
