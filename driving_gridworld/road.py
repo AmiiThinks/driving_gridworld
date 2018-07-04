@@ -187,15 +187,14 @@ class Road(object):
                 obstacles.append((str(o), o.row, o.col))
         return (self._car.col, self._car.speed, frozenset(obstacles))
 
-    def to_s(self, show_walls=True):
-        template = (['|', 'd', ' ', ' ', 'd', '|']
-                    if show_walls else ['d', ' ', ' ', 'd'])
-        board = ([template for _ in range(self._headlight_range)] +
-                 [car_row_array(self._car.col, show_walls=show_walls)])
-        for obs in self._obstacles:
-            if self.obstacle_is_visible(obs):
-                board[obs.row, obs.col + int(show_walls)] = str(obs)
-        return '\n'.join([''.join(row) for row in board])
+    def to_s(self):
+        s = np.concatenate(
+            [
+                self.board(),
+                np.full([self._num_rows(), 1], _byte('\n'), dtype='uint8')
+            ],
+            axis=1).tostring().decode('ascii')
+        return s[:-1]
 
     def prob_obstacle_appears(self, obstacle, num_obstacles_revealed,
                               distance):
