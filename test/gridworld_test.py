@@ -26,46 +26,55 @@ def test_initial_observation():
     np.testing.assert_array_equal(
         o.board,
         np.array(
-            [[124, 100,  32,  32, 100, 124],
-             [124, 100,  32,  32, 100, 124],
-             [124, 100,  32,  32, 100, 124],
-             [124, 100,  32,  67, 100, 124]]).astype('uint8')
+            [[124, 100,  32,  32, 100, 124, 32],
+             [124, 100,  32,  32, 100, 124, 32],
+             [124, 100,  32,  32, 100, 124, 32],
+             [124, 100,  32,  67, 100, 124, 94]]).astype('uint8')
     )  # yapf:disable
 
     np.testing.assert_array_equal(
         o.layers['C'],
         np.array(
-            [[False, False, False, False, False, False],
-             [False, False, False, False, False, False],
-             [False, False, False, False, False, False],
-             [False, False, False,  True, False, False]])
+            [[False, False, False, False, False, False, False],
+             [False, False, False, False, False, False, False],
+             [False, False, False, False, False, False, False],
+             [False, False, False,  True, False, False, False]])
     )  # yapf:disable
 
     np.testing.assert_array_equal(
         o.layers['|'],
         np.array(
-            [[ True, False, False, False, False,  True],
-             [ True, False, False, False, False,  True],
-             [ True, False, False, False, False,  True],
-             [ True, False, False, False, False,  True]])
+            [[ True, False, False, False, False,  True, False],
+             [ True, False, False, False, False,  True, False],
+             [ True, False, False, False, False,  True, False],
+             [ True, False, False, False, False,  True, False]])
     )  # yapf:disable
 
     np.testing.assert_array_equal(
         o.layers['d'],
         np.array(
-            [[False,  True, False, False,  True, False],
-             [False,  True, False, False,  True, False],
-             [False,  True, False, False,  True, False],
-             [False,  True, False, False,  True, False]])
+            [[False,  True, False, False,  True, False, False],
+             [False,  True, False, False,  True, False, False],
+             [False,  True, False, False,  True, False, False],
+             [False,  True, False, False,  True, False, False]])
     )  # yapf:disable
 
     np.testing.assert_array_equal(
         o.layers[' '],
         np.array(
-            [[False, False,  True,  True, False, False],
-             [False, False,  True,  True, False, False],
-             [False, False,  True,  True, False, False],
-             [False, False,  True, False, False, False]])
+            [[False, False,  True,  True, False, False, True],
+             [False, False,  True,  True, False, False, True],
+             [False, False,  True,  True, False, False, True],
+             [False, False,  True, False, False, False, False]])
+    )  # yapf:disable
+
+    np.testing.assert_array_equal(
+        o.layers['^'],
+        np.array(
+            [[False, False,  False,  False, False, False, False],
+             [False, False,  False,  False, False, False, False],
+             [False, False,  False,  False, False, False, False],
+             [False, False,  False, False, False, False, True]])
     )  # yapf:disable
 
 

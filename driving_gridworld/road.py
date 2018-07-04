@@ -29,6 +29,10 @@ def _byte(c, encoding='ascii'):
 
 
 class Road(object):
+    _num_lanes = 4
+    _speedometer_col_idx = -1
+    _world_width = _num_lanes + 2 + 1
+
     def __init__(self, headlight_range, car, obstacles=[]):
         self._headlight_range = headlight_range
 
@@ -43,12 +47,11 @@ class Road(object):
         self._available_spaces = set()
 
     def __eq__(self, other):
-        return (
-            self._headlight_range == other._headlight_range
-            and self._num_lanes == other._num_lanes
-            and self._car == other._car
-            and self._obstacles == other._obstacles
-            and self._available_spaces == other._available_spaces)
+        return (self._headlight_range == other._headlight_range
+                and self._num_lanes == other._num_lanes
+                and self._car == other._car
+                and self._obstacles == other._obstacles
+                and self._available_spaces == other._available_spaces)
 
     def copy(self):
         return self.__class__(self._headlight_range, self._car,
@@ -175,7 +178,7 @@ class Road(object):
             yield (next_road, prob, reward)
 
     def is_off_road(self):
-        return self._car.col == 0 or self._car.col == 3
+        return self._car.col <= 0 or self._car.col >= 3
 
     def to_key(self):
         obstacles = []
@@ -205,20 +208,25 @@ class Road(object):
                 if this_obstacle_could_appear else 0)
 
     def car_layer(self):
-        layer = np.full([self._num_rows(), self._num_lanes + 2], False)
+        layer = np.full([self._num_rows(), self._world_width], False)
         layer[self._car_row(), self._car.col + 1] = True
         return layer
 
     def wall_layer(self):
-        layer = np.full([self._num_rows(), self._num_lanes + 2], False)
+        layer = np.full([self._num_rows(), self._world_width], False)
         layer[:, 0] = True
-        layer[:, -1] = True
+        layer[:, -2] = True
         return layer
 
     def ditch_layer(self):
-        layer = np.full([self._num_rows(), self._num_lanes + 2], False)
+        layer = np.full([self._num_rows(), self._world_width], False)
         layer[:, 1] = True
-        layer[:, -2] = True
+        layer[:, -3] = True
+        return layer
+
+    def speedometer_layer(self):
+        layer = np.full([self._num_rows(), self._world_width], False)
+        layer[-self._car.speed:, -1] = True
         return layer
 
     def obstacle_layers(self):
@@ -226,7 +234,7 @@ class Road(object):
         for o in self._obstacles:
             c = str(o)
             if c not in layers:
-                layers[c] = np.full([self._num_rows(), self._num_lanes + 2],
+                layers[c] = np.full([self._num_rows(), self._world_width],
                                     False)
             if self.obstacle_is_visible(o):
                 layers[c][o.row, o.col + 1] = True
@@ -237,8 +245,9 @@ class Road(object):
         layers[str(self._car)] = self.car_layer()
         layers['|'] = self.wall_layer()
         layers['d'] = self.ditch_layer()
+        layers['^'] = self.speedometer_layer()
 
-        full_layer = np.full([self._num_rows(), self._num_lanes + 2], False)
+        full_layer = np.full([self._num_rows(), self._world_width], False)
         for l in layers.values():
             np.logical_or(full_layer, l, out=full_layer)
         layers[' '] = np.logical_not(full_layer)
@@ -246,11 +255,15 @@ class Road(object):
         return layers
 
     def ordered_layers(self):
-        obstacle_layers = self.obstacle_layers()
-
-        layers = [(' ', np.full([self._num_rows(), self._num_lanes + 2],
-                                False)), ('|', self.wall_layer()),
-                  ('d', self.ditch_layer())] + list(obstacle_layers.items())
+        layers = (
+            [
+                (' ', np.full([self._num_rows(), self._world_width], False)),
+                ('|', self.wall_layer()),
+                ('d', self.ditch_layer()),
+                ('^', self.speedometer_layer())
+            ]
+            + list(self.obstacle_layers().items())
+        )  # yapf:disable
         layers.append((str(self._car), self.car_layer()))
 
         for i in range(1, len(layers)):
@@ -260,8 +273,7 @@ class Road(object):
         return layers
 
     def board(self):
-        board = np.zeros(
-            [self._num_rows(), self._num_lanes + 2], dtype='uint8')
+        board = np.zeros([self._num_rows(), self._world_width], dtype='uint8')
         for c, layer in self.ordered_layers():
             partial = np.multiply(_byte(c), layer, dtype='uint8')
             is_present = partial > 0

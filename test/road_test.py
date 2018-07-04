@@ -104,7 +104,7 @@ def test_car_can_only_overdrive_headlights_by_one_unit():
 @pytest.mark.parametrize('headlight_range', range(1, 11))
 def test_car_layer(col, headlight_range):
     patient = Road(headlight_range, Car(col, 1), [])
-    x = np.full([headlight_range + 1, 6], False)
+    x = np.full([headlight_range + 1, 7], False)
     x[headlight_range, col + 1] = True
     np.testing.assert_array_equal(patient.car_layer(), x)
 
@@ -112,18 +112,18 @@ def test_car_layer(col, headlight_range):
 @pytest.mark.parametrize('headlight_range', range(1, 11))
 def test_wall_layer(headlight_range):
     patient = Road(headlight_range, Car(1, 1), [])
-    x = np.full([headlight_range + 1, 6], False)
+    x = np.full([headlight_range + 1, 7], False)
     x[:, 0] = True
-    x[:, -1] = True
+    x[:, -2] = True
     np.testing.assert_array_equal(patient.wall_layer(), x)
 
 
 @pytest.mark.parametrize('headlight_range', range(1, 11))
 def test_ditch_layer(headlight_range):
     patient = Road(headlight_range, Car(1, 1), [])
-    x = np.full([headlight_range + 1, 6], False)
+    x = np.full([headlight_range + 1, 7], False)
     x[:, 1] = True
-    x[:, -2] = True
+    x[:, -3] = True
     np.testing.assert_array_equal(patient.ditch_layer(), x)
 
 
@@ -136,12 +136,12 @@ def test_obstacle_layers():
 
     assert len(patient) == 2
 
-    x_bump_layer = np.full([headlight_range + 1, 6], False)
+    x_bump_layer = np.full([headlight_range + 1, 7], False)
     x_bump_layer[0, 1] = True
     x_bump_layer[1, 4] = True
     np.testing.assert_array_equal(patient[str(bumps[0])], x_bump_layer)
 
-    x_pedestrian_layer = np.full([headlight_range + 1, 6], False)
+    x_pedestrian_layer = np.full([headlight_range + 1, 7], False)
     x_pedestrian_layer[0, 2] = True
     x_pedestrian_layer[1, 3] = True
     np.testing.assert_array_equal(patient[str(pedestrians[0])],
@@ -155,7 +155,7 @@ def test_obstacles_outside_headlight_range_are_hidden():
 
     assert len(patient) == 1
 
-    x_bump_layer = np.full([headlight_range + 1, 6], False)
+    x_bump_layer = np.full([headlight_range + 1, 7], False)
     np.testing.assert_array_equal(patient[str(bumps[0])], x_bump_layer)
 
 
@@ -163,40 +163,48 @@ def test_layers():
     bumps = [Bump(-1, -1), Bump(0, 0), Bump(1, 3)]
     pedestrians = [Pedestrian(-1, -1), Pedestrian(0, 1), Pedestrian(1, 2)]
     headlight_range = 4
-    patient = Road(headlight_range, Car(1, 1), bumps + pedestrians).layers()
+    speed = 1
+    patient = Road(headlight_range, Car(1, speed=speed),
+                   bumps + pedestrians).layers()
 
-    assert len(patient) == 6
+    assert len(patient) == 7
 
-    x_bump_layer = np.full([headlight_range + 1, 6], False)
+    x_bump_layer = np.full([headlight_range + 1, 7], False)
     x_bump_layer[0, 1] = True
     x_bump_layer[1, 4] = True
     np.testing.assert_array_equal(patient[str(bumps[0])], x_bump_layer)
 
-    x_pedestrian_layer = np.full([headlight_range + 1, 6], False)
+    x_pedestrian_layer = np.full([headlight_range + 1, 7], False)
     x_pedestrian_layer[0, 2] = True
     x_pedestrian_layer[1, 3] = True
     np.testing.assert_array_equal(patient[str(pedestrians[0])],
                                   x_pedestrian_layer)
 
-    x_car_layer = np.full([headlight_range + 1, 6], False)
+    x_car_layer = np.full([headlight_range + 1, 7], False)
     x_car_layer[headlight_range, 1 + 1] = True
     np.testing.assert_array_equal(patient['C'], x_car_layer)
 
-    x_wall_layer = np.full([headlight_range + 1, 6], False)
+    x_wall_layer = np.full([headlight_range + 1, 7], False)
     x_wall_layer[:, 0] = True
-    x_wall_layer[:, -1] = True
+    x_wall_layer[:, -2] = True
     np.testing.assert_array_equal(patient['|'], x_wall_layer)
 
-    x_ditch_layer = np.full([headlight_range + 1, 6], False)
+    x_ditch_layer = np.full([headlight_range + 1, 7], False)
     x_ditch_layer[:, 1] = True
-    x_ditch_layer[:, -2] = True
+    x_ditch_layer[:, -3] = True
     np.testing.assert_array_equal(patient['d'], x_ditch_layer)
 
+    x_speedometer_layer = np.full([headlight_range + 1, 7], False)
+    x_speedometer_layer[-speed:, -1] = True
+    np.testing.assert_array_equal(patient['^'], x_speedometer_layer)
+
     x_empty_layer = np.logical_not(
-        np.logical_or(x_ditch_layer,
+        np.logical_or(x_speedometer_layer,
                       np.logical_or(
-                          np.logical_or(x_bump_layer, x_pedestrian_layer),
-                          np.logical_or(x_car_layer, x_wall_layer))))
+                          x_ditch_layer,
+                          np.logical_or(
+                              np.logical_or(x_bump_layer, x_pedestrian_layer),
+                              np.logical_or(x_car_layer, x_wall_layer)))))
     np.testing.assert_array_equal(patient[' '], x_empty_layer)
 
 
@@ -208,17 +216,22 @@ def test_board():
     bumps = [Bump(-1, -1), Bump(0, 0), Bump(1, 3)]
     pedestrians = [Pedestrian(-1, -1), Pedestrian(0, 1), Pedestrian(1, 2)]
     headlight_range = 4
-    patient = Road(headlight_range, Car(1, 1), bumps + pedestrians).board()
+    speed = 1
+    patient = Road(headlight_range, Car(1, speed=speed),
+                   bumps + pedestrians).board()
 
     assert patient.dtype == 'uint8'
 
-    x_board = np.full([headlight_range + 1, 6], _byte(' '), dtype='uint8')
+    x_board = np.full(
+        [headlight_range + 1, Road._world_width], _byte(' '), dtype='uint8')
 
     x_board[:, 0] = _byte('|')
-    x_board[:, -1] = _byte('|')
+    x_board[:, -2] = _byte('|')
 
     x_board[:, 1] = _byte('d')
-    x_board[:, -2] = _byte('d')
+    x_board[:, -3] = _byte('d')
+
+    x_board[-speed:, -1] = _byte('^')
 
     x_board[0, 1] = bumps[0].to_byte()
     x_board[1, 4] = bumps[0].to_byte()
