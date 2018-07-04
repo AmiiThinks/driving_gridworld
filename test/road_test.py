@@ -3,7 +3,7 @@ from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
-from driving_gridworld.actions import ACTIONS, RIGHT, NO_OP, LEFT
+from driving_gridworld.actions import ACTIONS, RIGHT, NO_OP, LEFT, UP, DOWN
 import pytest
 
 
@@ -96,8 +96,18 @@ def test_number_of_successors_invisible_obstacle_and_variable_speeds(
 
 def test_car_can_only_overdrive_headlights_by_one_unit():
     headlight_range = 2
-    road_test = Road(headlight_range, Car(0, 1))
-    assert road_test.speed_limit() == headlight_range + 1
+    with pytest.raises(ValueError):
+        patient = Road(headlight_range, Car(0, speed=headlight_range + 2))
+
+    patient = Road(headlight_range, Car(0, headlight_range + 1))
+    assert patient.speed_limit() == headlight_range + 1
+
+    patient = next(patient.successors(UP))[0]
+    assert patient.speed_limit() == headlight_range + 1
+    patient._car.speed == patient.speed_limit()
+
+    patient = next(patient.successors(DOWN))[0]
+    patient._car.speed == headlight_range
 
 
 @pytest.mark.parametrize('col', range(4))
