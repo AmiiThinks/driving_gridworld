@@ -10,8 +10,15 @@ class Obstacle(object):
     def reward_for_collision(self, speed):
         raise NotImplementedError()
 
+    def copy_at_position(self, row, col):
+        return self.__class__(
+            row, col, prob_of_appearing=self.prob_of_appearing)
+
     def next(self, distance):
-        return self.__class__(self.row + distance, self.col)
+        return self.__class__(
+            self.row + distance,
+            self.col,
+            prob_of_appearing=self.prob_of_appearing)
 
     def __str__(self):
         raise NotImplementedError()

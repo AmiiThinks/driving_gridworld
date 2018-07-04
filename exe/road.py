@@ -26,7 +26,9 @@ def main(headlight_range=5,
          num_steps=100,
          ui=False,
          recording_path=None,
-         discount=0.99):
+         discount=0.99,
+         bump_prob=0.2,
+         pedestrian_prob=0.2):
     np.random.seed(42)
 
     headlight_range = int(headlight_range)
@@ -44,7 +46,9 @@ def main(headlight_range=5,
             num_bumps,
             num_pedestrians,
             speed,
-            discount=discount)
+            discount=discount,
+            bump_appearance_prob=bump_prob,
+            pedestrian_appearance_prob=pedestrian_prob)
 
         game.ui_play()
     else:
@@ -55,7 +59,9 @@ def main(headlight_range=5,
             num_bumps,
             num_pedestrians,
             speed,
-            discount=discount)
+            discount=discount,
+            bump_appearance_prob=bump_prob,
+            pedestrian_appearance_prob=pedestrian_prob)
 
         observation, _, __ = game.its_showtime()
 

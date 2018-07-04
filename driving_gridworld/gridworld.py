@@ -13,7 +13,9 @@ class DrivingGridworld(object):
                  num_bumps=3,
                  num_pedestrians=3,
                  speed=1,
-                 discount=0.99):
+                 discount=0.99,
+                 bump_appearance_prob=0.2,
+                 pedestrian_appearance_prob=0.2):
         self.the_plot = {}
         self.game_over = False
         self._initial_speed = speed
@@ -25,9 +27,13 @@ class DrivingGridworld(object):
         self._num_pedestrians = num_pedestrians
 
         self.car = Car(2, self._initial_speed)
-        initial_bumps = [Bump(-1, -1) for _ in range(self._num_bumps)]
+        initial_bumps = [
+            Bump(-1, -1, prob_of_appearing=bump_appearance_prob)
+            for _ in range(self._num_bumps)
+        ]
         initial_pedestrians = [
-            Pedestrian(-1, -1) for _ in range(self._num_pedestrians)
+            Pedestrian(-1, -1, prob_of_appearing=pedestrian_appearance_prob)
+            for _ in range(self._num_pedestrians)
         ]
         self.road = Road(self._headlight_range, self.car,
                          initial_bumps + initial_pedestrians)

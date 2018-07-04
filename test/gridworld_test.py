@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from driving_gridworld.gridworld import DrivingGridworld, RecordingDrivingGridworld
-from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS
+from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS, NO_OP
 
 
 @pytest.mark.parametrize("action", ACTIONS + [QUIT, LIST_CONTROLS])
@@ -87,3 +87,47 @@ def test_recording_gridworld_creation():
     observation, reward, discount = patient.play(0)
     expected_recorded.append((patient.road.copy(), reward, discount, 0))
     assert patient.recorded() == expected_recorded
+
+
+def test_obstacles_always_appear_with_the_same_probability():
+    headlight_range = 4
+    patient = DrivingGridworld(
+        headlight_range, num_bumps=0, num_pedestrians=1, speed=1, discount=0.99, pedestrian_appearance_prob=0.01)
+
+    all_x = [
+        (frozenset(), 0.99, 0.0),
+        (frozenset([('p', 0, 1)]), 0.0025, 0.0),
+        (frozenset([('p', 0, 3)]), 0.0025, 0.0),
+        (frozenset([('p', 0, 0)]), 0.0025, 0.0),
+        (frozenset([('p', 0, 2)]), 0.0025, 0.0)
+    ]
+    all_x.reverse()
+    successors = tuple(patient.road.successors(NO_OP))
+    for s, prob, r in successors:
+        x_obstacles, x_prob, x_r = all_x.pop()
+        assert s.to_key()[-1] == x_obstacles
+        assert prob == x_prob
+        assert r == x_r
+
+    patient.road = successors[1][0]
+    for _ in range(headlight_range):
+        patient.play(NO_OP)
+
+    assert patient.road.to_s() == '|d  d| \n|d  d| \n|d  d| \n|d  d| \n|dpCd|^'
+    patient.play(NO_OP)
+    assert patient.road.to_s() == '|d  d| \n|d  d| \n|d  d| \n|d  d| \n|d Cd|^'
+
+    all_x = [
+        (frozenset(), 0.99, 0.0),
+        (frozenset([('p', 0, 1)]), 0.0025, 0.0),
+        (frozenset([('p', 0, 3)]), 0.0025, 0.0),
+        (frozenset([('p', 0, 0)]), 0.0025, 0.0),
+        (frozenset([('p', 0, 2)]), 0.0025, 0.0)
+    ]
+    all_x.reverse()
+    successors = tuple(patient.road.successors(NO_OP))
+    for s, prob, r in successors:
+        x_obstacles, x_prob, x_r = all_x.pop()
+        assert s.to_key()[-1] == x_obstacles
+        assert prob == x_prob
+        assert r == x_r

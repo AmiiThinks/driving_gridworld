@@ -142,7 +142,7 @@ class Road(object):
 
                 obs_is_revealed = i in reveal_indices
                 if obs_is_revealed:
-                    next_obstacle = obs.__class__(
+                    next_obstacle = obs.copy_at_position(
                         *positions[num_obstacles_revealed])
                     num_avail_spaces_given_revealed_obs = (
                         len(self._available_spaces) - num_obstacles_revealed)
