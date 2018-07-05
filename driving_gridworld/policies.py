@@ -14,7 +14,7 @@ def hand_coded_score_for_columns_adjacent_to_car(road):
 
 def hand_coded_obstacle_score(obst, road):
     if isinstance(obst, Pedestrian):
-        return -2 * road._headlight_range
+        return -10 * road._headlight_range
     elif isinstance(obst, Bump):
         return -1
     else:
