@@ -28,7 +28,9 @@ def hand_coded_data_gathering_policy(road):
     if max_idx == 0: return LEFT
     elif max_idx == 2: return RIGHT
     else:
-        if scores[1] < 0 and road._car.speed > 1: return DOWN
-        elif road._car.speed >= road._headlight_range: return DOWN
-        elif road._car.speed < road._headlight_range - 1: return UP
+        if ((scores[1] < 0 and road._car.speed > 1)
+                or road._car.speed > road._headlight_range):
+            return DOWN
+        elif road._car.speed < road._headlight_range - 1:
+            return UP
     return NO_OP

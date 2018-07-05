@@ -102,7 +102,7 @@ def test_policy_speeds_up_but_does_not_overdrive_headlights():
 
     road = Road(headlight_range, Car(2, headlight_range), [])
     action_taken = hand_coded_data_gathering_policy(road)
-    assert action_taken == DOWN
+    assert action_taken == NO_OP
 
     road = Road(headlight_range, Car(2, headlight_range - 1), [])
     action_taken = hand_coded_data_gathering_policy(road)
