@@ -8,7 +8,7 @@ from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS, NO_OP
 def test_game_over(action):
     patient = DrivingGridworld(4, 0, 0, 1, discount=0.123)
     o, r, d = patient.its_showtime()
-    assert d == 0
+    assert d == 0.123
     assert not patient.game_over
     o, r, d = patient.play(action)
     assert patient.game_over == (action == QUIT)
@@ -21,7 +21,7 @@ def test_initial_observation():
 
     o, r, d = patient.its_showtime()
     assert r == 0
-    assert d == 0
+    assert d == 0.8
 
     np.testing.assert_array_equal(
         o.board,

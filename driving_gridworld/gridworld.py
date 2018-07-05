@@ -43,7 +43,7 @@ class DrivingGridworld(object):
         self.backdrop = self.Backdrop([])
 
     def its_showtime(self):
-        return self.road.observation(), 0.0, 0.0
+        return self.road.observation(), 0.0, self._discount
 
     def play(self, a):
         if a == QUIT:
