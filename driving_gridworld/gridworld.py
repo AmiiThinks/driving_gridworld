@@ -58,6 +58,10 @@ class DrivingGridworld(object):
 
     def fast_play(self, a):
         self.road, reward = self.road.sample_transition(a)
+        if self.road.has_crashed():
+            reward += self.road.reward_for_being_in_transit()/(1 - self._discount)
+            self._discount = 0.0
+            self.game_over = True
         return self.road, reward, self._discount
 
     def with_walls_removed(self, board):

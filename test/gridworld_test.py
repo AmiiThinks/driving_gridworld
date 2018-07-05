@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from driving_gridworld.gridworld import DrivingGridworld, RecordingDrivingGridworld
-from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS, NO_OP
+from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS, LEFT, RIGHT
 
 
 @pytest.mark.parametrize("action", ACTIONS + [QUIT, LIST_CONTROLS])
