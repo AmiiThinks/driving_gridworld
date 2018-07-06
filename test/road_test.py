@@ -371,6 +371,4 @@ def test_crashing_into_right_wall():
 
 
 def test_reward_for_being_in_transit():
-    car = Car(1, 1)
-    patient = Road(4, car, [])
-    assert patient.reward_for_being_in_transit == -1.0
+    assert Road(4, Car(1, 1), []).reward_for_being_in_transit == -1.0
