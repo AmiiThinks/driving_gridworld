@@ -341,29 +341,33 @@ def test_to_s():
 
 
 @pytest.mark.parametrize('col', [-1, 4])
-def test_car_has_crashed_onto_walls(col):
-    headlight_range = 4
-    car = Car(col, 1)
-    patient = Road(headlight_range, car, [])
-    assert patient.has_crashed(car)
+def test_car_has_crashed(col):
+    patient = Road(4, Car(col, 1), [])
     assert patient.has_crashed()
+    assert patient.has_crashed(Car(col, 1))
+    assert not patient.has_crashed(Car(0, 1))
 
 
-@pytest.mark.parametrize('col_action', [(0, LEFT), (3, RIGHT)])
-def test_car_crashes_onto_walls(col_action):
-    col = col_action[0]
-    action = col_action[1]
-    car = Car(col, 1)
-    patient = Road(4, car, [])
-    successors = list(patient.successors(action))
+def test_crashing_into_left_wall():
+    patient = Road(1, Car(0, 1), [])
+    successors = list(patient.successors(LEFT))
     assert len(successors) == 1
     s, p, r = successors[0]
+    assert p == 1.0
     assert s.to_key() != patient.to_key()
+    assert s.to_key() == (-1, 0, frozenset())
+    assert s.to_s() == '|d  d| \nCd  d| '
 
-    successors = list(s.successors(action))
+
+def test_crashing_into_right_wall():
+    patient = Road(1, Car(3, 1), [])
+    successors = list(patient.successors(RIGHT))
     assert len(successors) == 1
-    s_prime, p, r = successors[0]
-    assert s_prime.to_key() == s.to_key()
+    s, p, r = successors[0]
+    assert p == 1.0
+    assert s.to_key() != patient.to_key()
+    assert s.to_key() == (4, 0, frozenset())
+    assert s.to_s() == '|d  d| \n|d  dC '
 
 
 def test_reward_for_being_in_transit():
