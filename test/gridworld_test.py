@@ -1,7 +1,8 @@
 import pytest
 import numpy as np
 from driving_gridworld.gridworld import DrivingGridworld, RecordingDrivingGridworld
-from driving_gridworld.actions import ACTIONS, QUIT, LIST_CONTROLS, LEFT, RIGHT
+from driving_gridworld.actions import \
+    ACTIONS, QUIT, LIST_CONTROLS, LEFT, RIGHT, NO_OP
 
 
 @pytest.mark.parametrize("action", ACTIONS + [QUIT, LIST_CONTROLS])
@@ -92,7 +93,12 @@ def test_recording_gridworld_creation():
 def test_obstacles_always_appear_with_the_same_probability():
     headlight_range = 4
     patient = DrivingGridworld(
-        headlight_range, num_bumps=0, num_pedestrians=1, speed=1, discount=0.99, pedestrian_appearance_prob=0.01)
+        headlight_range,
+        num_bumps=0,
+        num_pedestrians=1,
+        speed=1,
+        discount=0.99,
+        pedestrian_appearance_prob=0.01)
 
     all_x = [
         (frozenset(), 0.99, 0.0),
@@ -100,7 +106,7 @@ def test_obstacles_always_appear_with_the_same_probability():
         (frozenset([('p', 0, 3)]), 0.0025, 0.0),
         (frozenset([('p', 0, 0)]), 0.0025, 0.0),
         (frozenset([('p', 0, 2)]), 0.0025, 0.0)
-    ]
+    ]  # yapf:disable
     all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))
     for s, prob, r in successors:
@@ -123,7 +129,7 @@ def test_obstacles_always_appear_with_the_same_probability():
         (frozenset([('p', 0, 3)]), 0.0025, 0.0),
         (frozenset([('p', 0, 0)]), 0.0025, 0.0),
         (frozenset([('p', 0, 2)]), 0.0025, 0.0)
-    ]
+    ]  # yapf:disable
     all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))
     for s, prob, r in successors:
@@ -131,3 +137,51 @@ def test_obstacles_always_appear_with_the_same_probability():
         assert s.to_key()[-1] == x_obstacles
         assert prob == x_prob
         assert r == x_r
+
+
+@pytest.mark.parametrize('method',
+                         [DrivingGridworld.play, DrivingGridworld.fast_play])
+def test_crashing_into_left_wall(method):
+    discount_mdp = 0.9
+    patient = DrivingGridworld(
+        headlight_range=1,
+        num_bumps=0,
+        num_pedestrians=0,
+        discount=discount_mdp,
+        car_col=0)
+    observation, reward, discount = method(patient, LEFT)
+    assert patient.road.has_crashed()
+    assert patient.game_over
+    assert discount == 0.0
+    assert (
+        reward == pytest.approx(
+            patient.road.reward_for_being_in_transit
+            + patient.road.reward_for_being_in_transit / (1 - discount_mdp)
+        )
+    )  # yapf:disable
+    assert patient.road.to_key() == (-1, 0, frozenset())
+    assert patient.road.to_s() == '|d  d| \nCd  d| '
+
+
+@pytest.mark.parametrize('method',
+                         [DrivingGridworld.play, DrivingGridworld.fast_play])
+def test_crashing_into_right_wall(method):
+    discount_mdp = 0.9
+    patient = DrivingGridworld(
+        headlight_range=1,
+        num_bumps=0,
+        num_pedestrians=0,
+        discount=discount_mdp,
+        car_col=3)
+    observation, reward, discount = method(patient, RIGHT)
+    assert patient.road.has_crashed()
+    assert patient.game_over
+    assert discount == 0.0
+    assert (
+        reward == pytest.approx(
+            patient.road.reward_for_being_in_transit
+            + patient.road.reward_for_being_in_transit / (1 - discount_mdp)
+        )
+    )  # yapf:disable
+    assert patient.road.to_key() == (4, 0, frozenset())
+    assert patient.road.to_s() == '|d  d| \n|d  dC '
