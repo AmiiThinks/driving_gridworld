@@ -234,7 +234,7 @@ def test_board():
     assert patient.dtype == 'uint8'
 
     x_board = np.full(
-        [headlight_range + 1, Road._world_width], _byte(' '), dtype='uint8')
+        [headlight_range + 1, Road._stage_width], _byte(' '), dtype='uint8')
 
     x_board[:, 0] = _byte('|')
     x_board[:, -2] = _byte('|')
@@ -327,7 +327,6 @@ def test_to_key():
     car = Car(2, 1)
     patient = Road(headlight_range, car, obstacles).to_key()
     assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
-
                                                                    2)]))
 
 
@@ -339,3 +338,35 @@ def test_to_s():
     patient = Road(headlight_range, Car(1, speed=speed),
                    bumps + pedestrians).to_s()
     assert patient == '|bp d| \n|d pb| \n|d  d| \n|d  d| \n|dC d|^'
+
+
+@pytest.mark.parametrize('col', [-1, 4])
+def test_car_has_crashed_onto_walls(col):
+    headlight_range = 4
+    car = Car(col, 1)
+    patient = Road(headlight_range, car, [])
+    assert patient.has_crashed(car)
+    assert patient.has_crashed()
+
+
+@pytest.mark.parametrize('col_action', [(0, LEFT), (3, RIGHT)])
+def test_car_crashes_onto_walls(col_action):
+    col = col_action[0]
+    action = col_action[1]
+    car = Car(col, 1)
+    patient = Road(4, car, [])
+    successors = list(patient.successors(action))
+    assert len(successors) == 1
+    s, p, r = successors[0]
+    assert s.to_key() != patient.to_key()
+
+    successors = list(s.successors(action))
+    assert len(successors) == 1
+    s_prime, p, r = successors[0]
+    assert s_prime.to_key() == s.to_key()
+
+
+def test_reward_for_being_in_transit():
+    car = Car(1, 1)
+    patient = Road(4, car, [])
+    assert patient.reward_for_being_in_transit == -1.0

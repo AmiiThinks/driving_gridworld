@@ -1,7 +1,6 @@
 from itertools import product, permutations
 import numpy as np
 from pycolab.rendering import Observation
-from .car import car_row_array
 
 
 def combinations(iterable, r, collection=tuple):
@@ -29,9 +28,23 @@ def _byte(c, encoding='ascii'):
 
 
 class Road(object):
-    _num_lanes = 4
+    # Drivable road definitions
+    _paved_lanes = np.array([1, 2])
+    _ditch_lanes = np.array([0, 3])
+    _num_paved_lanes = len(_paved_lanes)
+    _num_ditch_lanes = len(_ditch_lanes)
+    _num_lanes = _num_paved_lanes + _num_ditch_lanes
+    _max_lane_idx = _num_lanes - 1
+
+    # Stage definitions
+    _stage_offset = 1
+    _wall_columns = np.array([0, _num_lanes + _stage_offset])
+    _num_wall_columns = len(_wall_columns)
+    _num_speedometer_columns = 1
     _speedometer_col_idx = -1
-    _world_width = _num_lanes + 2 + 1
+    _stage_width = _num_lanes + _num_wall_columns + _num_speedometer_columns
+
+    reward_for_being_in_transit = -1
 
     def __init__(self, headlight_range, car, obstacles=[]):
         self._headlight_range = headlight_range
@@ -40,8 +53,6 @@ class Road(object):
             raise ValueError(
                 "Car's speed, {}, breaks the speed limit, {}.".format(
                     car.speed, self.speed_limit()))
-
-        self._num_lanes = 4
         self._car = car
         self._obstacles = obstacles
         self._available_spaces = set()
@@ -112,9 +123,6 @@ class Road(object):
                 assert len(positions) == len(reveal_indices)
                 yield positions, reveal_indices
 
-    def reward_for_being_in_transit(self):
-        return -1.0
-
     def successors(self, action):
         '''Generates successor, probability, reward tuples.
 
@@ -143,7 +151,7 @@ class Road(object):
             prob = 1.0
             num_obstacles_revealed = 0
             next_obstacles = []
-            reward = self.reward_for_being_in_transit()
+            reward = self.reward_for_being_in_transit
 
             reward = -1.0
             for i in range(len(self._obstacles)):
@@ -190,13 +198,11 @@ class Road(object):
             yield (next_road, prob, reward)
 
     def is_off_road(self):
-        return self._car.col <= 0 or self._car.col >= 3
+        return self._car.col <= 0 or self._car.col >= self._max_lane_idx
 
     def has_crashed(self, car=None):
-        if car == None:
-            return self._car.col < 0 or self._car.col > 3
-        else:
-            return car.col < 0 or car.col > 3    
+        if car is None: car = self._car
+        return car.col < 0 or car.col > self._max_lane_idx
 
     def to_key(self):
         obstacles = []
@@ -225,25 +231,24 @@ class Road(object):
                 if this_obstacle_could_appear else 0)
 
     def car_layer(self):
-        layer = np.full([self._num_rows(), self._world_width], False)
-        layer[self._car_row(), self._car.col + 1] = True
+        layer = np.full([self._num_rows(), self._stage_width], False)
+        layer[self._car_row(), self._car.col + self._stage_offset] = True
         return layer
 
     def wall_layer(self):
-        layer = np.full([self._num_rows(), self._world_width], False)
-        layer[:, 0] = True
-        layer[:, -2] = True
+        layer = np.full([self._num_rows(), self._stage_width], False)
+        layer[:, self._wall_columns] = True
         return layer
 
     def ditch_layer(self):
-        layer = np.full([self._num_rows(), self._world_width], False)
-        layer[:, 1] = True
-        layer[:, -3] = True
+        layer = np.full([self._num_rows(), self._stage_width], False)
+        layer[:, self._ditch_lanes + self._stage_offset] = True
         return layer
 
     def speedometer_layer(self):
-        layer = np.full([self._num_rows(), self._world_width], False)
-        layer[self.speed_limit() - self._car.speed:, -1] = True
+        layer = np.full([self._num_rows(), self._stage_width], False)
+        layer[self.speed_limit() - self._car.speed:,
+              self._speedometer_col_idx] = True
         return layer
 
     def obstacle_layers(self):
@@ -251,10 +256,10 @@ class Road(object):
         for o in self._obstacles:
             c = str(o)
             if c not in layers:
-                layers[c] = np.full([self._num_rows(), self._world_width],
+                layers[c] = np.full([self._num_rows(), self._stage_width],
                                     False)
             if self.obstacle_is_visible(o):
-                layers[c][o.row, o.col + 1] = True
+                layers[c][o.row, o.col + self._stage_offset] = True
         return layers
 
     def layers(self):
@@ -264,7 +269,7 @@ class Road(object):
         layers['d'] = self.ditch_layer()
         layers['^'] = self.speedometer_layer()
 
-        full_layer = np.full([self._num_rows(), self._world_width], False)
+        full_layer = np.full([self._num_rows(), self._stage_width], False)
         for l in layers.values():
             np.logical_or(full_layer, l, out=full_layer)
         layers[' '] = np.logical_not(full_layer)
@@ -274,7 +279,7 @@ class Road(object):
     def ordered_layers(self):
         layers = (
             [
-                (' ', np.full([self._num_rows(), self._world_width], False)),
+                (' ', np.full([self._num_rows(), self._stage_width], False)),
                 ('|', self.wall_layer()),
                 ('d', self.ditch_layer()),
                 ('^', self.speedometer_layer())
@@ -290,7 +295,7 @@ class Road(object):
         return layers
 
     def board(self):
-        board = np.zeros([self._num_rows(), self._world_width], dtype='uint8')
+        board = np.zeros([self._num_rows(), self._stage_width], dtype='uint8')
         for c, layer in self.ordered_layers():
             partial = np.multiply(_byte(c), layer, dtype='uint8')
             is_present = partial > 0
