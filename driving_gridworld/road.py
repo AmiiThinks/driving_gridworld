@@ -168,13 +168,13 @@ class Road(object):
 
                     if collision_occurred:
                         reward += next_obstacle.reward_for_collision(
-                            self._car.speed)
+                            self._car.speed, self._stddev)
             reward += self._car.reward(action)
 
             if self.is_off_road():
                 reward -= 2 * distance * self._car.speed
                 noise = np.random.normal(0, self._stddev * self._car.speed)
-                reward += noise   
+                reward += noise
             next_road = self.__class__(self._headlight_range, next_car,
                                        next_obstacles)
             yield (next_road, prob, reward)
