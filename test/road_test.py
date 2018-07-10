@@ -341,9 +341,9 @@ def test_to_s():
 
 
 @pytest.mark.parametrize("col", [0, 3])
-@pytest.mark.parametrize("std_rew", [(0.025, -1.9875821461747192),
-    (0.05, -1.9751642923494384), (0.075, -1.9627464385241575),
-    (1.0, -1.5032858469887673)])
+@pytest.mark.parametrize(
+    "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
+                (0.075, -1.9627464385241575), (1.0, -1.5032858469887673)])
 def test_white_noise_added_reward_off_road(col, std_rew):
     np.random.seed(42)
     std = std_rew[0]
@@ -355,7 +355,9 @@ def test_white_noise_added_reward_off_road(col, std_rew):
     assert r == true_r
 
 
-@pytest.mark.parametrize("std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384), (0.075, -1.9627464385241575), (1.0, -1.503285846988767)])
+@pytest.mark.parametrize(
+    "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
+                (0.075, -1.9627464385241575), (1.0, -1.503285846988767)])
 def test_white_noise_added_hit_bump(std_rew):
     np.random.seed(42)
     std = std_rew[0]
@@ -368,7 +370,9 @@ def test_white_noise_added_hit_bump(std_rew):
     assert r == true_r
 
 
-@pytest.mark.parametrize("std_rew", [(0.025, -799.9875821461748), (0.05, -799.9751642923494), (0.075, -799.9627464385242), (1.0, -799.5032858469888)])
+@pytest.mark.parametrize(
+    "std_rew", [(0.025, -799.9875821461748), (0.05, -799.9751642923494),
+                (0.075, -799.9627464385242), (1.0, -799.5032858469888)])
 def test_white_noise_added_hit_pedestrian(std_rew):
     np.random.seed(42)
     std = std_rew[0]

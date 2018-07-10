@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Obstacle(object):
     def __init__(self, row, col, prob_of_appearing=0.2):
         self.row = row
@@ -29,9 +30,9 @@ class Obstacle(object):
         return bytes(str(self), encoding)[0]
 
     def reward_for_collision(self, speed, stddev=0.0):
-      proportional_stddev = stddev * speed
-      return (self.expected_reward_for_collision(speed) + np.random.normal(
-          0, proportional_stddev))
+        proportional_stddev = stddev * speed
+        return (self.expected_reward_for_collision(speed) +
+                np.random.normal(0, proportional_stddev))
 
 
 class Bump(Obstacle):
