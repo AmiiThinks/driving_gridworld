@@ -234,7 +234,7 @@ def test_board():
     assert patient.dtype == 'uint8'
 
     x_board = np.full(
-        [headlight_range + 1, Road._world_width], _byte(' '), dtype='uint8')
+        [headlight_range + 1, Road._stage_width], _byte(' '), dtype='uint8')
 
     x_board[:, 0] = _byte('|')
     x_board[:, -2] = _byte('|')
@@ -340,6 +340,40 @@ def test_to_s():
     assert patient == '|bp d| \n|d pb| \n|d  d| \n|d  d| \n|dC d|^'
 
 
+@pytest.mark.parametrize('col', [-1, 4])
+def test_car_has_crashed(col):
+    patient = Road(4, Car(col, 1), [])
+    assert patient.has_crashed()
+    assert patient.has_crashed(Car(col, 1))
+    assert not patient.has_crashed(Car(0, 1))
+
+
+def test_crashing_into_left_wall():
+    patient = Road(1, Car(0, 1), [])
+    successors = list(patient.successors(LEFT))
+    assert len(successors) == 1
+    s, p, r = successors[0]
+    assert p == 1.0
+    assert s.to_key() != patient.to_key()
+    assert s.to_key() == (-1, 0, frozenset())
+    assert s.to_s() == '|d  d| \nCd  d| '
+
+
+def test_crashing_into_right_wall():
+    patient = Road(1, Car(3, 1), [])
+    successors = list(patient.successors(RIGHT))
+    assert len(successors) == 1
+    s, p, r = successors[0]
+    assert p == 1.0
+    assert s.to_key() != patient.to_key()
+    assert s.to_key() == (4, 0, frozenset())
+    assert s.to_s() == '|d  d| \n|d  dC '
+
+
+def test_reward_for_being_in_transit():
+    assert Road(4, Car(1, 1), []).reward_for_being_in_transit == -1.0
+
+
 @pytest.mark.parametrize("col", [0, 3])
 @pytest.mark.parametrize(
     "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
@@ -383,3 +417,4 @@ def test_white_noise_added_hit_pedestrian(std_rew):
     successors_list = list(patient.successors(NO_OP))
     r = successors_list[0][2]
     assert r == true_r
+
