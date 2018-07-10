@@ -46,7 +46,7 @@ class Road(object):
 
     reward_for_being_in_transit = -1
 
-    def __init__(self, headlight_range, car, obstacles=[]):
+    def __init__(self, headlight_range, car, obstacles=[], stddev=0.0):
         self._headlight_range = headlight_range
 
         if self.speed_limit() < car.speed:
@@ -56,6 +56,7 @@ class Road(object):
         self._car = car
         self._obstacles = obstacles
         self._available_spaces = set()
+        self._stddev = stddev
 
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
@@ -187,12 +188,13 @@ class Road(object):
 
                     if collision_occurred:
                         reward += next_obstacle.reward_for_collision(
-                            self._car.speed)
+                            self._car.speed, self._stddev)
             reward += self._car.reward(action)
 
             if self.is_off_road():
                 reward -= 2 * distance * self._car.speed
-
+                noise = np.random.normal(0, self._stddev * self._car.speed)
+                reward += noise
             next_road = self.__class__(self._headlight_range, next_car,
                                        next_obstacles)
             yield (next_road, prob, reward)

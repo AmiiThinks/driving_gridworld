@@ -372,3 +372,49 @@ def test_crashing_into_right_wall():
 
 def test_reward_for_being_in_transit():
     assert Road(4, Car(1, 1), []).reward_for_being_in_transit == -1.0
+
+
+@pytest.mark.parametrize("col", [0, 3])
+@pytest.mark.parametrize(
+    "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
+                (0.075, -1.9627464385241575), (1.0, -1.5032858469887673)])
+def test_white_noise_added_reward_off_road(col, std_rew):
+    np.random.seed(42)
+    std = std_rew[0]
+    true_r = std_rew[1]
+    car = Car(col, 1)
+    patient = Road(4, car, [], std)
+    successors_list = list(patient.successors(NO_OP))
+    r = successors_list[0][2]
+    assert r == true_r
+
+
+@pytest.mark.parametrize(
+    "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
+                (0.075, -1.9627464385241575), (1.0, -1.503285846988767)])
+def test_white_noise_added_hit_bump(std_rew):
+    np.random.seed(42)
+    std = std_rew[0]
+    true_r = std_rew[1]
+    obst = [Bump(3, 1)]
+    car = Car(1, 1)
+    patient = Road(4, car, obst, std)
+    successors_list = list(patient.successors(NO_OP))
+    r = successors_list[0][2]
+    assert r == true_r
+
+
+@pytest.mark.parametrize(
+    "std_rew", [(0.025, -799.9875821461748), (0.05, -799.9751642923494),
+                (0.075, -799.9627464385242), (1.0, -799.5032858469888)])
+def test_white_noise_added_hit_pedestrian(std_rew):
+    np.random.seed(42)
+    std = std_rew[0]
+    true_r = std_rew[1]
+    obst = [Pedestrian(3, 1)]
+    car = Car(1, 1)
+    patient = Road(4, car, obst, std)
+    successors_list = list(patient.successors(NO_OP))
+    r = successors_list[0][2]
+    assert r == true_r
+

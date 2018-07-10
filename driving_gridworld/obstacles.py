@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class Obstacle(object):
     def __init__(self, row, col, prob_of_appearing=0.2):
         self.row = row
@@ -7,7 +10,7 @@ class Obstacle(object):
     def position(self):
         return (self.row, self.col)
 
-    def reward_for_collision(self, speed):
+    def expected_reward_for_collision(self, speed):
         raise NotImplementedError()
 
     def copy_at_position(self, row, col):
@@ -26,9 +29,14 @@ class Obstacle(object):
     def to_byte(self, encoding='ascii'):
         return bytes(str(self), encoding)[0]
 
+    def reward_for_collision(self, speed, stddev=0.0):
+        proportional_stddev = stddev * speed
+        return (self.expected_reward_for_collision(speed) +
+                np.random.normal(0, proportional_stddev))
+
 
 class Bump(Obstacle):
-    def reward_for_collision(self, speed):
+    def expected_reward_for_collision(self, speed):
         return -2 * speed
 
     def __str__(self):
@@ -36,7 +44,7 @@ class Bump(Obstacle):
 
 
 class Pedestrian(Obstacle):
-    def reward_for_collision(self, speed):
+    def expected_reward_for_collision(self, speed):
         return -8e2**speed
 
     def __str__(self):
