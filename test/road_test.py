@@ -26,6 +26,61 @@ def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_
     assert patient == [(tuple(), set())]
 
 
+@pytest.mark.parametrize("obst", [Bump(0, -1), Pedestrian(0, -1)])
+def test_every_combination_of_revealed_obstacles_with_one_obstacle(obst):
+    headlight_range = 2
+    road_test = Road(headlight_range, Car(1, 1), [obst])
+    patient = [(positions, reveal_indices)
+               for positions, reveal_indices in
+               road_test.every_combination_of_revealed_obstacles(1)]
+    assert patient == [((), set()), (((0, 1),), {0}), (((0, 3),), {0}),
+        (((0, 0),), {0}), (((0, 2),), {0})]
+
+@pytest.mark.parametrize("obst", [Bump(0, -1), Pedestrian(0, -1)])
+def test_every_combination_of_revealed_obstacles_with_one_obstacle_speed_2(obst):
+    headlight_range = 4
+    speed = 2
+    road_test = Road(headlight_range, Car(1, speed), [obst])
+    patient = [(positions, reveal_indices)
+               for positions, reveal_indices in
+               road_test.every_combination_of_revealed_obstacles(speed)]
+    assert patient == [((), set()), (((0, 1),), {0}), (((1, 2),), {0}),
+        (((0, 0),), {0}), (((1, 3),), {0}), (((1, 1),), {0}), (((1, 0),), {0}),
+        (((0, 2),), {0}), (((0, 3),), {0})]
+
+
+@pytest.mark.parametrize("obst", [Bump(0, -1), Pedestrian(0, -1)])
+def test_every_combination_of_revealed_obstacles_with_one_obstacle_speed_3(obst):
+    headlight_range = 4
+    speed = 3
+    road_test = Road(headlight_range, Car(1, speed), [obst])
+    patient = [(positions, reveal_indices)
+               for positions, reveal_indices in
+               road_test.every_combination_of_revealed_obstacles(speed)]
+    assert patient == [((), set()), (((0, 1),), {0}), (((1, 2),), {0}),
+        (((0, 0),), {0}), (((1, 3),), {0}), (((2, 1),), {0}), (((2, 0),), {0}),
+        (((1, 1),), {0}), (((2, 3),), {0}), (((2, 2),), {0}), (((1, 0),), {0}),
+        (((0, 2),), {0}), (((0, 3),), {0})]
+
+
+@pytest.mark.parametrize("obst_list", [[Bump(0, -1), Pedestrian(0, -1)]])
+def test_every_combination_of_revealed_obstacles_with_two_obstacles(obst_list):
+    headlight_range = 2
+    road_test = Road(headlight_range, Car(1, 1), obst_list)
+    patient = [(positions, reveal_indices)
+               for positions, reveal_indices in
+               road_test.every_combination_of_revealed_obstacles(1)]
+    assert patient == [((), set()), (((0, 1),), {0}), (((0, 1),), {1}),
+        (((0, 3),), {0}), (((0, 3),), {1}), (((0, 0),), {0}), (((0, 0),), {1}),
+        (((0, 2),), {0}), (((0, 2),), {1}), (((0, 1), (0, 3)), {0, 1}),
+        (((0, 1), (0, 0)), {0, 1}), (((0, 1), (0, 2)), {0, 1}),
+        (((0, 3), (0, 1)), {0, 1}), (((0, 3), (0, 0)), {0, 1}),
+        (((0, 3), (0, 2)), {0, 1}), (((0, 0), (0, 1)), {0, 1}),
+        (((0, 0), (0, 3)), {0, 1}), (((0, 0), (0, 2)), {0, 1}),
+        (((0, 2), (0, 1)), {0, 1}), (((0, 2), (0, 3)), {0, 1}),
+        (((0, 2), (0, 0)), {0, 1})]
+
+
 @pytest.mark.parametrize("obst", [Bump(0, 0), Pedestrian(0, 0)])
 @pytest.mark.parametrize("action", ACTIONS)
 def test_transition_probs_with_one_obstacle_are_1(obst, action):
@@ -417,4 +472,3 @@ def test_white_noise_added_hit_pedestrian(std_rew):
     successors_list = list(patient.successors(NO_OP))
     r = successors_list[0][2]
     assert r == true_r
-
