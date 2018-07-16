@@ -2,10 +2,11 @@ import numpy as np
 
 
 class Obstacle(object):
-    def __init__(self, row, col, prob_of_appearing=0.2):
+    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=0.0):
         self.row = row
         self.col = col
         self.prob_of_appearing = prob_of_appearing
+        self.obst_speed = obst_speed
 
     def position(self):
         return (self.row, self.col)
@@ -19,7 +20,7 @@ class Obstacle(object):
 
     def next(self, distance):
         return self.__class__(
-            self.row + distance,
+            self.row + distance + self.obst_speed,
             self.col,
             prob_of_appearing=self.prob_of_appearing)
 
@@ -49,3 +50,17 @@ class Pedestrian(Obstacle):
 
     def __str__(self):
         return 'p'
+
+
+class CarObstacle(Obstacle):
+    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=1.0):
+        self.row = row
+        self.col = col
+        self.prob_of_appearing = prob_of_appearing
+        self.obst_speed = obst_speed
+
+    def expected_reward_for_collision(self, speed):
+        return -8e2**(speed + self.obst_speed) 
+
+    def __str__(self):
+        return 'c'
