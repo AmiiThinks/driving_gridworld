@@ -1,8 +1,9 @@
 import numpy as np
+import math
 
 
 class Obstacle(object):
-    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=0.0):
+    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=0):
         self.row = row
         self.col = col
         self.prob_of_appearing = prob_of_appearing
@@ -53,14 +54,19 @@ class Pedestrian(Obstacle):
 
 
 class CarObstacle(Obstacle):
-    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=1.0):
+    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=1):
         self.row = row
         self.col = col
         self.prob_of_appearing = prob_of_appearing
         self.obst_speed = obst_speed
 
     def expected_reward_for_collision(self, speed):
-        return -8e2**(speed + self.obst_speed) 
+        return -8e2**(speed + self.obst_speed)
+
+    def reward_for_collision(self, speed, stddev=0.0):
+        proportional_stddev = stddev * speed
+        return (self.expected_reward_for_collision(speed) +
+                np.random.normal(0, math.sqrt(2)*proportional_stddev))
 
     def __str__(self):
         return 'c'

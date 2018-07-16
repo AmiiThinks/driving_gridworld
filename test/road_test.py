@@ -420,12 +420,17 @@ def test_white_noise_added_hit_pedestrian(std_rew):
     assert r == true_r
 
 
-def test_reward_car_hits_car():
-    obst = [CarObstacle(2, 1)]
+@pytest.mark.parametrize("std_rew", [(0.025, -639999.9824385027), (0.05, -639999.9648770054), (0.075, -639999.9473155082), (1.0, -639999.2975401082)])
+def test_reward_car_hits_car_obstacle(std_rew):
+    np.random.seed(42)
+    std = std_rew[0]
+    true_r = std_rew[1]
+    car_obst = CarObstacle(2, 1)
+    car_obstacle_speed = 1
     car_speed = 1
     car = Car(1, car_speed)
     headlight_range = 4
-    patient = Road(headlight_range, car, obst)
+    patient = Road(headlight_range, car, [car_obst], std)
     successors_list = list(patient.successors(NO_OP))
     r = successors_list[0][2]
-    assert r == -8e2**(1 + car_speed)
+    assert r == true_r

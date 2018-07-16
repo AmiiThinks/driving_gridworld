@@ -1,5 +1,5 @@
 from driving_gridworld.road import Road
-from driving_gridworld.obstacles import Bump, Pedestrian
+from driving_gridworld.obstacles import Bump, Pedestrian, CarObstacle
 from driving_gridworld.car import Car
 from driving_gridworld.actions import QUIT, NO_OP, LIST_CONTROLS
 from collections import namedtuple
@@ -12,10 +12,12 @@ class DrivingGridworld(object):
                  headlight_range=5,
                  num_bumps=3,
                  num_pedestrians=3,
+                 num_car_obstacles=1,
                  speed=1,
                  discount=0.99,
                  bump_appearance_prob=0.2,
                  pedestrian_appearance_prob=0.2,
+                 car_obstacle_appearance_prob=0.2,
                  car_col=2):
         self.the_plot = {}
         self.game_over = False
@@ -27,9 +29,10 @@ class DrivingGridworld(object):
         self._headlight_range = headlight_range
         self._num_bumps = num_bumps
         self._num_pedestrians = num_pedestrians
+        self._num_car_obstacles = num_car_obstacles
         self._bump_appearance_prob = bump_appearance_prob
         self._pedestrian_appearance_prob = pedestrian_appearance_prob
-
+        self._car_obstacle_appearance_prob = car_obstacle_appearance_prob
         self.reset()
 
         # For compatibility with pycolab croppers.
@@ -48,8 +51,14 @@ class DrivingGridworld(object):
                 -1, -1, prob_of_appearing=self._pedestrian_appearance_prob)
             for _ in range(self._num_pedestrians)
         ]
+        initial_car_obstacles = [
+            CarObstacle(
+                -1, -1, prob_of_appearing=self._car_obstacle_appearance_prob)
+            for _ in range(self._num_car_obstacles)
+        ]
+
         self.road = Road(self._headlight_range, self.car,
-                         initial_bumps + initial_pedestrians)
+                         initial_bumps + initial_pedestrians + initial_car_obstacles)
         return self
 
     def its_showtime(self):
