@@ -96,6 +96,7 @@ def test_obstacles_always_appear_with_the_same_probability():
         headlight_range,
         num_bumps=0,
         num_pedestrians=1,
+        num_car_obstacles=0,
         speed=1,
         discount=0.99,
         pedestrian_appearance_prob=0.01)
