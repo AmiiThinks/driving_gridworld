@@ -29,6 +29,7 @@ class DrivingGridworld(object):
         self._num_pedestrians = num_pedestrians
         self._bump_appearance_prob = bump_appearance_prob
         self._pedestrian_appearance_prob = pedestrian_appearance_prob
+
         self.reset()
 
         # For compatibility with pycolab croppers.
@@ -47,7 +48,6 @@ class DrivingGridworld(object):
                 -1, -1, prob_of_appearing=self._pedestrian_appearance_prob)
             for _ in range(self._num_pedestrians)
         ]
-
         self.road = Road(self._headlight_range, self.car,
                          initial_bumps + initial_pedestrians)
         return self
