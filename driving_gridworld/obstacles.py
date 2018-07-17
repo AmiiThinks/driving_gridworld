@@ -1,13 +1,12 @@
 import numpy as np
-import math
 
 
 class Obstacle(object):
-    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=0):
+    def __init__(self, row, col, prob_of_appearing=0.2, speed=0):
         self.row = row
         self.col = col
         self.prob_of_appearing = prob_of_appearing
-        self.obst_speed = obst_speed
+        self.speed = speed
 
     def position(self):
         return (self.row, self.col)
@@ -21,9 +20,10 @@ class Obstacle(object):
 
     def next(self, distance):
         return self.__class__(
-            self.row + distance + self.obst_speed,
+            self.row + distance + self.speed,
             self.col,
-            prob_of_appearing=self.prob_of_appearing)
+            prob_of_appearing=self.prob_of_appearing,
+            speed=self.speed)
 
     def __str__(self):
         raise NotImplementedError()
@@ -32,9 +32,11 @@ class Obstacle(object):
         return bytes(str(self), encoding)[0]
 
     def reward_for_collision(self, speed, stddev=0.0):
-        proportional_stddev = stddev * speed
+        stddev_car = stddev * speed
+        stddev_car_obst = stddev * self.speed
         return (self.expected_reward_for_collision(speed) +
-                np.random.normal(0, proportional_stddev))
+                np.random.normal(0, np.sqrt(np.square(stddev_car) +
+                np.square(stddev_car_obst))))
 
 
 class Bump(Obstacle):
@@ -47,26 +49,7 @@ class Bump(Obstacle):
 
 class Pedestrian(Obstacle):
     def expected_reward_for_collision(self, speed):
-        return -8e2**speed
+        return -8e2**(speed + self.speed)
 
     def __str__(self):
         return 'p'
-
-
-class CarObstacle(Obstacle):
-    def __init__(self, row, col, prob_of_appearing=0.2, obst_speed=1):
-        self.row = row
-        self.col = col
-        self.prob_of_appearing = prob_of_appearing
-        self.obst_speed = obst_speed
-
-    def expected_reward_for_collision(self, speed):
-        return -8e2**(speed + self.obst_speed)
-
-    def reward_for_collision(self, speed, stddev=0.0):
-        proportional_stddev = stddev * speed
-        return (self.expected_reward_for_collision(speed) +
-                np.random.normal(0, math.sqrt(2)*proportional_stddev))
-
-    def __str__(self):
-        return 'c'
