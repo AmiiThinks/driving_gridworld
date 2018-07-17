@@ -32,11 +32,10 @@ class Obstacle(object):
         return bytes(str(self), encoding)[0]
 
     def reward_for_collision(self, speed, stddev=0.0):
-        stddev_car = stddev * speed
-        stddev_car_obst = stddev * self.speed
-        return (self.expected_reward_for_collision(speed) +
-                np.random.normal(0, np.sqrt(np.square(stddev_car) +
-                np.square(stddev_car_obst))))
+        return np.random.normal(
+            self.expected_reward_for_collision(speed),
+            np.sqrt(
+                np.square(stddev * speed) + np.square(stddev * self.speed)))
 
 
 class Bump(Obstacle):
