@@ -2,7 +2,6 @@ import numpy as np
 from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
-from driving_gridworld.obstacles import CarObstacle
 from driving_gridworld.car import Car
 from driving_gridworld.actions import ACTIONS, RIGHT, NO_OP, LEFT, UP, DOWN
 import pytest
@@ -421,16 +420,15 @@ def test_white_noise_added_hit_pedestrian(std_rew):
 
 
 @pytest.mark.parametrize("std_rew", [(0.025, -639999.9824385027), (0.05, -639999.9648770054), (0.075, -639999.9473155082), (1.0, -639999.2975401082)])
-def test_reward_car_hits_car_obstacle(std_rew):
+def test_reward_car_hits_moving_pedestrian(std_rew):
     np.random.seed(42)
     std = std_rew[0]
     true_r = std_rew[1]
-    car_obst = CarObstacle(2, 1)
-    car_obstacle_speed = 1
-    car_speed = 1
-    car = Car(1, car_speed)
+    obs = Pedestrian(2, 1)
+    obs.speed = 1
+    car = Car(1, 1)
     headlight_range = 4
-    patient = Road(headlight_range, car, [car_obst], std)
-    successors_list = list(patient.successors(NO_OP))
+    road = Road(headlight_range, car, [obs], std)
+    successors_list = list(road.successors(NO_OP))
     r = successors_list[0][2]
     assert r == true_r
