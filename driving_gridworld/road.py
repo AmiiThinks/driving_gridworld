@@ -61,7 +61,12 @@ class Road(object):
                 product(range(distance), range(cls._num_lanes)))
         return cls._available_spaces_given_distance[distance]
 
-    def __init__(self, headlight_range, car, obstacles=[], stddev=0.0):
+    def __init__(self,
+                 headlight_range,
+                 car,
+                 obstacles=[],
+                 stddev=0.0,
+                 allowed_obstacle_appearance_columns=None):
         self._headlight_range = headlight_range
 
         if self.speed_limit() < car.speed:
@@ -71,6 +76,13 @@ class Road(object):
         self._car = car
         self._obstacles = obstacles
         self._stddev = stddev
+
+        if allowed_obstacle_appearance_columns is None:
+            allowed_obstacle_appearance_columns = [
+                set(range(self._num_lanes)) for _ in range(len(obstacles))
+            ]
+        assert len(allowed_obstacle_appearance_columns) == len(obstacles)
+        self._allowed_obstacle_appearance_columns = allowed_obstacle_appearance_columns
 
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
@@ -120,6 +132,16 @@ class Road(object):
             for positions, reveal_indices in permutation_combination_pairs(
                     self.available_spaces(distance), hidden_obstacle_indices,
                     num_newly_visible_obstacles):
+                positions_iter = iter(positions)
+                skip = False
+                for i in range(len(self._obstacles)):
+                    if i in reveal_indices:
+                        row, col = next(positions_iter)
+                        if col not in (
+                                self._allowed_obstacle_appearance_columns[i]):
+                            skip = True
+                            break
+                if skip: continue
                 yield positions, reveal_indices
 
     def collision_occurred(self, obs, obs_is_revealed, next_obstacle,
@@ -153,8 +175,18 @@ class Road(object):
         else:
             distance = self._car.progress_toward_destination(action)
 
-        for positions, reveal_indices in self.every_combination_of_revealed_obstacles(
-                distance):
+        for positions, reveal_indices in (
+                self.every_combination_of_revealed_obstacles(distance)):
+            positions_iter = iter(positions)
+            skip = False
+            for i in range(len(self._obstacles)):
+                if i in reveal_indices:
+                    row, col = next(positions_iter)
+                    if col not in self._allowed_obstacle_appearance_columns[i]:
+                        skip = True
+                        break
+            if skip: continue
+
             positions = iter(positions)
             prob = 1.0
             next_obstacles = []
@@ -186,8 +218,13 @@ class Road(object):
             if self.is_off_road():
                 reward -= np.random.normal(2 * distance * self._car.speed,
                                            self._stddev * self._car.speed)
-            next_road = self.__class__(self._headlight_range, next_car,
-                                       next_obstacles)
+            next_road = self.__class__(
+                self._headlight_range,
+                next_car,
+                obstacles=next_obstacles,
+                stddev=self._stddev,
+                allowed_obstacle_appearance_columns=(
+                    self._allowed_obstacle_appearance_columns))
             yield next_road, prob, reward
 
     def is_off_road(self):
