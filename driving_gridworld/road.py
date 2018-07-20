@@ -106,9 +106,6 @@ class Road(object):
         self._available_spaces = set()
         for pos in product(range(distance), range(self._num_lanes)):
             self._available_spaces.add(pos)
-        for obs in self._obstacles:
-            if not self.obstacle_outside_car_path(obs):
-                self._available_spaces.discard(obs.position())
 
         hidden_obstacle_indices = [
             i for i in range(len(self._obstacles))
@@ -157,7 +154,7 @@ class Road(object):
                 obs = self._obstacles[i]
                 p = self.prob_obstacle_appears(obs, num_obstacles_revealed,
                                                distance)
-                assert p <= 1
+                assert 0 <= p <= 1
 
                 obs_is_revealed = i in reveal_indices
                 if obs_is_revealed:
