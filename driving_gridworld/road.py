@@ -27,6 +27,11 @@ def _byte(c, encoding='ascii'):
     return bytes(c, encoding)[0]
 
 
+def permutation_combination_pairs(a, b, n):
+    return product(
+        list(permutations(a, n)), list(combinations(b, n, collection=set)))
+
+
 class Road(object):
     # Drivable road definitions
     _paved_lanes = np.array([1, 2])
@@ -63,11 +68,15 @@ class Road(object):
                 and self._num_lanes == other._num_lanes
                 and self._car == other._car
                 and self._obstacles == other._obstacles
-                and self._available_spaces == other._available_spaces)
+                and self._available_spaces == other._available_spaces
+                and self._stddev == other._stddev)
 
     def copy(self):
-        return self.__class__(self._headlight_range, self._car,
-                              self._obstacles)
+        return self.__class__(
+            self._headlight_range,
+            self._car,
+            self._obstacles,
+            stddev=self._stddev)
 
     def _car_row(self):
         return self._headlight_range
@@ -110,17 +119,9 @@ class Road(object):
 
         for num_newly_visible_obstacles in range(
                 max_num_revealed_obstacles + 1):
-            position_sets = list(
-                permutations(self._available_spaces,
-                             num_newly_visible_obstacles))
-            sets_of_obstacle_indices_to_reveal = list(
-                combinations(
-                    hidden_obstacle_indices,
-                    num_newly_visible_obstacles,
-                    collection=set))
-
-            for positions, reveal_indices in product(
-                    position_sets, sets_of_obstacle_indices_to_reveal):
+            for positions, reveal_indices in permutation_combination_pairs(
+                    self._available_spaces, hidden_obstacle_indices,
+                    num_newly_visible_obstacles):
                 assert len(positions) == len(reveal_indices)
                 yield positions, reveal_indices
 
@@ -134,15 +135,12 @@ class Road(object):
             float: The reward given the current state, action, and successor
                    state. The reward function is deterministic.
         '''
-        if not self.has_crashed():
-            distance = self._car.progress_toward_destination(action)
-        else:
-            distance = 0
-
-        distance = self._car.progress_toward_destination(action)
         next_car = self._car.next(action, self.speed_limit())
-        if self.has_crashed(next_car):
+        if self.has_crashed() or self.has_crashed(next_car):
+            distance = 0
             next_car.speed = 0
+        else:
+            distance = self._car.progress_toward_destination(action)
 
         revealed_obstacles = (
             self.every_combination_of_revealed_obstacles(distance)

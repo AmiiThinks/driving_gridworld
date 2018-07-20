@@ -16,7 +16,10 @@ class Obstacle(object):
 
     def copy_at_position(self, row, col):
         return self.__class__(
-            row, col, prob_of_appearing=self.prob_of_appearing)
+            row,
+            col,
+            prob_of_appearing=self.prob_of_appearing,
+            speed=self.speed)
 
     def next(self, distance):
         return self.__class__(
@@ -40,7 +43,7 @@ class Obstacle(object):
 
 class Bump(Obstacle):
     def expected_reward_for_collision(self, speed):
-        return -2 * speed
+        return -2 * (speed + self.speed)
 
     def __str__(self):
         return 'b'
