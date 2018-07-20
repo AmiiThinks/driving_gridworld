@@ -376,8 +376,8 @@ def test_reward_for_being_in_transit():
 
 @pytest.mark.parametrize("col", [0, 3])
 @pytest.mark.parametrize(
-    "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
-                (0.075, -1.9627464385241575), (1.0, -1.5032858469887673)])
+    "std_rew", [(0.025, -2.012417853825281), (0.05, -2.0248357076505616),
+                (0.075, -2.0372535614758425), (1.0, -2.496714153011233)])
 def test_white_noise_added_reward_off_road(col, std_rew):
     np.random.seed(42)
     std = std_rew[0]

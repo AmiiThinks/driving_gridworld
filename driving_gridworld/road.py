@@ -51,6 +51,16 @@ class Road(object):
 
     reward_for_being_in_transit = -1
 
+    # Cache
+    _available_spaces_given_distance = {}
+
+    @classmethod
+    def available_spaces(cls, distance):
+        if distance not in cls._available_spaces_given_distance:
+            cls._available_spaces_given_distance[distance] = set(
+                product(range(distance), range(cls._num_lanes)))
+        return cls._available_spaces_given_distance[distance]
+
     def __init__(self, headlight_range, car, obstacles=[], stddev=0.0):
         self._headlight_range = headlight_range
 
@@ -60,15 +70,12 @@ class Road(object):
                     car.speed, self.speed_limit()))
         self._car = car
         self._obstacles = obstacles
-        self._available_spaces = set()
         self._stddev = stddev
 
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
-                and self._num_lanes == other._num_lanes
                 and self._car == other._car
                 and self._obstacles == other._obstacles
-                and self._available_spaces == other._available_spaces
                 and self._stddev == other._stddev)
 
     def copy(self):
@@ -103,24 +110,31 @@ class Road(object):
                 or obstacle.row > self._headlight_range)
 
     def every_combination_of_revealed_obstacles(self, distance):
-        self._available_spaces = set()
-        for pos in product(range(distance), range(self._num_lanes)):
-            self._available_spaces.add(pos)
-
         hidden_obstacle_indices = [
             i for i in range(len(self._obstacles))
             if self.obstacle_outside_car_path(self._obstacles[i])
         ]
-        max_num_revealed_obstacles = min(
-            len(hidden_obstacle_indices), len(self._available_spaces))
 
         for num_newly_visible_obstacles in range(
-                max_num_revealed_obstacles + 1):
+                len(hidden_obstacle_indices) + 1):
             for positions, reveal_indices in permutation_combination_pairs(
-                    self._available_spaces, hidden_obstacle_indices,
+                    self.available_spaces(distance), hidden_obstacle_indices,
                     num_newly_visible_obstacles):
-                assert len(positions) == len(reveal_indices)
                 yield positions, reveal_indices
+
+    def collision_occurred(self, obs, obs_is_revealed, next_obstacle,
+                           next_car):
+        if next_obstacle.col == next_car.col:
+            obstacle_was_in_front_of_car = (obs.row < self._car_row()
+                                            or obs_is_revealed)
+            car_ran_over_obstacle = (obstacle_was_in_front_of_car
+                                     and next_obstacle.row >= self._car_row())
+            car_changed_lanes = self._car.col != next_car.col
+            car_changed_lanes_into_obstacle = (car_changed_lanes
+                                               and self._car_row() == obs.row)
+            return car_changed_lanes_into_obstacle or car_ran_over_obstacle
+        else:
+            return False
 
     def successors(self, action):
         '''Generates successor, probability, reward tuples.
@@ -139,60 +153,42 @@ class Road(object):
         else:
             distance = self._car.progress_toward_destination(action)
 
-        revealed_obstacles = (
-            self.every_combination_of_revealed_obstacles(distance)
-            if distance > 0 else [(None, set())])
-
-        for positions, reveal_indices in revealed_obstacles:
+        for positions, reveal_indices in self.every_combination_of_revealed_obstacles(
+                distance):
+            positions = iter(positions)
             prob = 1.0
-            num_obstacles_revealed = 0
             next_obstacles = []
             reward = self.reward_for_being_in_transit
 
-            reward = -1.0
             for i in range(len(self._obstacles)):
                 obs = self._obstacles[i]
-                p = self.prob_obstacle_appears(obs, num_obstacles_revealed,
-                                               distance)
+                p = self.prob_obstacle_appears(obs, distance)
                 assert 0 <= p <= 1
 
                 obs_is_revealed = i in reveal_indices
                 if obs_is_revealed:
-                    next_obstacle = obs.copy_at_position(
-                        *positions[num_obstacles_revealed])
-                    num_avail_spaces_given_revealed_obs = (
-                        len(self._available_spaces) - num_obstacles_revealed)
-                    prob *= p / float(num_avail_spaces_given_revealed_obs)
-                    num_obstacles_revealed += 1
+                    next_obstacle = obs.copy_at_position(*next(positions))
+                    prob_not_appearing_closer = ((1.0 - p)**(
+                        next_obstacle.row - distance + 1))
+                    prob_appearing_in_row = p * prob_not_appearing_closer
+                    prob *= prob_appearing_in_row / float(self._num_lanes)
                 else:
                     next_obstacle = obs.next(distance)
-                    prob *= 1.0 - p
+                    prob *= (1.0 - p)**distance
                 next_obstacles.append(next_obstacle)
 
-                if next_obstacle.col == next_car.col:
-                    obstacle_was_in_front_of_car = (obs.row < self._car_row()
-                                                    or obs_is_revealed)
-                    car_ran_over_obstacle = (
-                        obstacle_was_in_front_of_car
-                        and next_obstacle.row >= self._car_row())
-                    car_changed_lanes = self._car.col != next_car.col
-                    car_changed_lanes_into_obstacle = (
-                        car_changed_lanes and self._car_row() == obs.row)
-                    collision_occurred = (car_changed_lanes_into_obstacle
-                                          or car_ran_over_obstacle)
-
-                    if collision_occurred:
-                        reward += next_obstacle.reward_for_collision(
-                            self._car.speed, self._stddev)
+                if (self.collision_occurred(obs, obs_is_revealed,
+                                            next_obstacle, next_car)):
+                    reward += next_obstacle.reward_for_collision(
+                        self._car.speed, self._stddev)
             reward += self._car.reward(action)
 
             if self.is_off_road():
-                reward -= 2 * distance * self._car.speed
-                noise = np.random.normal(0, self._stddev * self._car.speed)
-                reward += noise
+                reward -= np.random.normal(2 * distance * self._car.speed,
+                                           self._stddev * self._car.speed)
             next_road = self.__class__(self._headlight_range, next_car,
                                        next_obstacles)
-            yield (next_road, prob, reward)
+            yield next_road, prob, reward
 
     def is_off_road(self):
         return self._car.col <= 0 or self._car.col >= self._max_lane_idx
@@ -217,11 +213,8 @@ class Road(object):
             axis=1).tostring().decode('ascii')
         return s[:-1]
 
-    def prob_obstacle_appears(self, obstacle, num_obstacles_revealed,
-                              distance):
-        space_is_available = (num_obstacles_revealed < len(
-            self._available_spaces))
-        an_obstacle_could_appear = space_is_available and distance > 0
+    def prob_obstacle_appears(self, obstacle, distance):
+        an_obstacle_could_appear = distance > 0
         this_obstacle_could_appear = (an_obstacle_could_appear and
                                       self.obstacle_outside_car_path(obstacle))
         return (obstacle.prob_of_appearing
