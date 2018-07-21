@@ -20,10 +20,8 @@ def test_no_obstacles_revealed_is_the_only_valid_set_of_revealed_obstacles_when_
         obst):
     headlight_range = 2
     road_test = Road(headlight_range, Car(1, 1), [obst])
-    patient = [(positions, reveal_indices)
-               for positions, reveal_indices in
-               road_test.every_combination_of_revealed_obstacles(1)]
-    assert patient == [(tuple(), set())]
+    patient = list(road_test.every_combination_of_revealed_obstacles(1))
+    assert patient == [{}]
 
 
 @pytest.mark.parametrize("obst", [Bump(0, 0), Pedestrian(0, 0)])

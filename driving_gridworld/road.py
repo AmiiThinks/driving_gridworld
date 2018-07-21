@@ -1,26 +1,6 @@
-from itertools import product, permutations
+from itertools import product, permutations, combinations
 import numpy as np
 from pycolab.rendering import Observation
-
-
-def combinations(iterable, r, collection=tuple):
-    '''`r`-size `collection`s of elements in `iterable`.'''
-    iterable = tuple(iterable)
-    n = len(iterable)
-    if r > n:
-        return
-    indices = list(range(r))
-    yield collection(iterable[i] for i in indices)
-    while True:
-        for i in range(r - 1, -1, -1):
-            if indices[i] != i + n - r:
-                break
-        else:
-            return
-        indices[i] += 1
-        for j in range(i + 1, r):
-            indices[j] = indices[j - 1] + 1
-        yield collection(iterable[i] for i in indices)
 
 
 def _byte(c, encoding='ascii'):
@@ -28,8 +8,7 @@ def _byte(c, encoding='ascii'):
 
 
 def permutation_combination_pairs(a, b, n):
-    return product(
-        list(permutations(a, n)), list(combinations(b, n, collection=set)))
+    return product(permutations(a, n), combinations(b, n))
 
 
 class Road(object):
@@ -129,20 +108,18 @@ class Road(object):
 
         for num_newly_visible_obstacles in range(
                 len(hidden_obstacle_indices) + 1):
-            for positions, reveal_indices in permutation_combination_pairs(
+            for positions, group in permutation_combination_pairs(
                     self.available_spaces(distance), hidden_obstacle_indices,
                     num_newly_visible_obstacles):
-                positions_iter = iter(positions)
-                skip = False
-                for i in range(len(self._obstacles)):
-                    if i in reveal_indices:
-                        row, col = next(positions_iter)
-                        if col not in (
-                                self._allowed_obstacle_appearance_columns[i]):
-                            skip = True
-                            break
-                if skip: continue
-                yield positions, reveal_indices
+                revealed = dict(zip(group, positions))
+
+                valid_configuration = True
+                for obstacle_idx, (row, col) in revealed.items():
+                    if col not in self._allowed_obstacle_appearance_columns[obstacle_idx]:  # yapf:disable
+                        valid_configuration = False
+                        break
+                if valid_configuration:
+                    yield revealed
 
     def collision_occurred(self, obs, obs_is_revealed, next_obstacle,
                            next_car):
@@ -175,19 +152,8 @@ class Road(object):
         else:
             distance = self._car.progress_toward_destination(action)
 
-        for positions, reveal_indices in (
+        for revealed in (
                 self.every_combination_of_revealed_obstacles(distance)):
-            positions_iter = iter(positions)
-            skip = False
-            for i in range(len(self._obstacles)):
-                if i in reveal_indices:
-                    row, col = next(positions_iter)
-                    if col not in self._allowed_obstacle_appearance_columns[i]:
-                        skip = True
-                        break
-            if skip: continue
-
-            positions = iter(positions)
             prob = 1.0
             next_obstacles = []
             reward = self.reward_for_being_in_transit
@@ -197,9 +163,9 @@ class Road(object):
                 p = self.prob_obstacle_appears(obs, distance)
                 assert 0 <= p <= 1
 
-                obs_is_revealed = i in reveal_indices
+                obs_is_revealed = i in revealed
                 if obs_is_revealed:
-                    next_obstacle = obs.copy_at_position(*next(positions))
+                    next_obstacle = obs.copy_at_position(*revealed[i])
                     prob_not_appearing_closer = ((1.0 - p)**(
                         next_obstacle.row - distance + 1))
                     prob_appearing_in_row = p * prob_not_appearing_closer
