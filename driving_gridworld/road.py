@@ -100,25 +100,28 @@ class Road(object):
         return (obstacle.col < 0 or obstacle.col >= self._num_lanes
                 or obstacle.row > self._headlight_range)
 
+    def is_valid_configuration(self, revealed):
+        for obstacle_idx, (row, col) in revealed.items():
+            if col not in self._allowed_obstacle_appearance_columns[obstacle_idx]:  # yapf:disable
+                return False
+        return True
+
     def every_combination_of_revealed_obstacles(self, distance):
         hidden_obstacle_indices = [
             i for i in range(len(self._obstacles))
             if self.obstacle_outside_car_path(self._obstacles[i])
         ]
 
-        for num_newly_visible_obstacles in range(
-                len(hidden_obstacle_indices) + 1):
-            for positions, group in permutation_combination_pairs(
-                    self.available_spaces(distance), hidden_obstacle_indices,
-                    num_newly_visible_obstacles):
+        for num_newly_visible_obstacles in range(len(hidden_obstacle_indices) + 1):  # yapf:disable
+            for positions, group in (
+                permutation_combination_pairs(
+                    self.available_spaces(distance),
+                    hidden_obstacle_indices,
+                    num_newly_visible_obstacles
+                )
+            ):  # yapf:disable
                 revealed = dict(zip(group, positions))
-
-                valid_configuration = True
-                for obstacle_idx, (row, col) in revealed.items():
-                    if col not in self._allowed_obstacle_appearance_columns[obstacle_idx]:  # yapf:disable
-                        valid_configuration = False
-                        break
-                if valid_configuration:
+                if self.is_valid_configuration(revealed):
                     yield revealed
 
     def collision_occurred(self, obs, obs_is_revealed, next_obstacle,
