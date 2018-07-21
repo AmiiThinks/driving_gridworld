@@ -152,8 +152,7 @@ class Road(object):
         else:
             distance = self._car.progress_toward_destination(action)
 
-        for revealed in (
-                self.every_combination_of_revealed_obstacles(distance)):
+        for revealed in self.every_combination_of_revealed_obstacles(distance):
             prob = 1.0
             next_obstacles = []
             reward = self.reward_for_being_in_transit
