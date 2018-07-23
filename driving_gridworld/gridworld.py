@@ -5,44 +5,62 @@ from driving_gridworld.actions import QUIT, NO_OP, LIST_CONTROLS
 from collections import namedtuple
 
 
+def simple_road_factory(headlight_range=5,
+                        num_bumps=3,
+                        num_pedestrians=3,
+                        speed=1,
+                        discount=0.99,
+                        bump_appearance_prob=0.2,
+                        pedestrian_appearance_prob=0.2,
+                        car_col=2):
+    car = Car(car_col, speed)
+    initial_bumps = [
+        Bump(-1, -1, prob_of_appearing=bump_appearance_prob)
+        for _ in range(num_bumps)
+    ]
+    initial_pedestrians = [
+        Pedestrian(-1, -1, prob_of_appearing=pedestrian_appearance_prob)
+        for _ in range(num_pedestrians)
+    ]
+    return Road(headlight_range, car, initial_bumps + initial_pedestrians)
+
+
 class DrivingGridworld(object):
     Backdrop = namedtuple('Backdrop', ['palette'])
 
-    def __init__(self,
-                 headlight_range=5,
-                 num_bumps=3,
-                 num_pedestrians=3,
-                 speed=1,
-                 discount=0.99,
-                 bump_appearance_prob=0.2,
-                 pedestrian_appearance_prob=0.2,
-                 car_col=2):
-        self._initial_speed = speed
+    @classmethod
+    def legacy_constructor(cls,
+                           headlight_range=5,
+                           num_bumps=3,
+                           num_pedestrians=3,
+                           speed=1,
+                           discount=0.99,
+                           bump_appearance_prob=0.2,
+                           pedestrian_appearance_prob=0.2,
+                           car_col=2):
+        return cls(
+            (
+                lambda: simple_road_factory(
+                    headlight_range=headlight_range,
+                    num_bumps=num_bumps,
+                    num_pedestrians=num_pedestrians,
+                    speed=speed,
+                    discount=discount,
+                    bump_appearance_prob=bump_appearance_prob,
+                    pedestrian_appearance_prob=pedestrian_appearance_prob,
+                    car_col=car_col)
+            ),
+            discount=discount
+        )
+
+    def __init__(self, road_factory=simple_road_factory, discount=0.99):
+        self._road_factory = road_factory
         self._discount = discount
-        self._car_col = car_col
-
-        self._headlight_range = headlight_range
-        self._num_bumps = num_bumps
-        self._num_pedestrians = num_pedestrians
-        self._bump_appearance_prob = bump_appearance_prob
-        self._pedestrian_appearance_prob = pedestrian_appearance_prob
-
         self.reset()
 
     def reset(self):
         self.game_over = False
-        self.car = Car(self._car_col, self._initial_speed)
-        initial_bumps = [
-            Bump(-1, -1, prob_of_appearing=self._bump_appearance_prob)
-            for _ in range(self._num_bumps)
-        ]
-        initial_pedestrians = [
-            Pedestrian(
-                -1, -1, prob_of_appearing=self._pedestrian_appearance_prob)
-            for _ in range(self._num_pedestrians)
-        ]
-        self.road = Road(self._headlight_range, self.car,
-                         initial_bumps + initial_pedestrians)
+        self.road = self._road_factory()
 
         # For compatibility with pycolab croppers.
         self.the_plot = {}
@@ -76,19 +94,11 @@ class DrivingGridworld(object):
             discount = 0.0
         return self.road, reward, discount
 
-    def with_walls_removed(self, board):
-        return board[:, 1:-1]
-
     def observation_to_key(self, o):
-        board_array = self.with_walls_removed(o.board)
         ascii_board_rows = [
-            board_array[i].tostring().decode('ascii')
-            for i in range(len(board_array))
+            o.board[i].tostring().decode('ascii') for i in range(len(o.board))
         ]
-        return ('\n'.join(ascii_board_rows), self.speed())
-
-    def speed(self):
-        return self.car.speed
+        return ''.join(ascii_board_rows)
 
 
 class RecordingDrivingGridworld(DrivingGridworld):

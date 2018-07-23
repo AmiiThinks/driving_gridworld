@@ -41,7 +41,7 @@ def main(headlight_range=5,
     if ui:
         from driving_gridworld.human_ui import UiRecordingDrivingGridworld
 
-        game = UiRecordingDrivingGridworld(
+        game = UiRecordingDrivingGridworld.legacy_constructor(
             headlight_range,
             num_bumps,
             num_pedestrians,
@@ -54,7 +54,7 @@ def main(headlight_range=5,
     else:
         from driving_gridworld.gridworld import RecordingDrivingGridworld
 
-        game = RecordingDrivingGridworld(
+        game = RecordingDrivingGridworld.legacy_constructor(
             headlight_range,
             num_bumps,
             num_pedestrians,

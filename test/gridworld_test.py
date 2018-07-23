@@ -7,7 +7,7 @@ from driving_gridworld.actions import \
 
 @pytest.mark.parametrize("action", ACTIONS + [QUIT, LIST_CONTROLS])
 def test_game_over(action):
-    patient = DrivingGridworld(4, 0, 0, 1, discount=0.123)
+    patient = DrivingGridworld.legacy_constructor(4, 0, 0, 1, discount=0.123)
     o, r, d = patient.its_showtime()
     assert d == 0.123
     assert not patient.game_over
@@ -17,7 +17,7 @@ def test_game_over(action):
 
 
 def test_initial_observation():
-    patient = DrivingGridworld(3, 0, 0, 1, discount=0.8)
+    patient = DrivingGridworld.legacy_constructor(3, 0, 0, 1, discount=0.8)
     assert patient.road.to_s() == '|d  d| \n|d  d| \n|d  d| \n|d Cd|^'
 
     o, r, d = patient.its_showtime()
@@ -80,7 +80,7 @@ def test_initial_observation():
 
 
 def test_recording_gridworld_creation():
-    patient = RecordingDrivingGridworld()
+    patient = RecordingDrivingGridworld.legacy_constructor()
     assert patient.recorded() == []
     observation, reward, discount = patient.its_showtime()
     expected_recorded = [(patient.road.copy(), reward, discount)]
@@ -92,7 +92,7 @@ def test_recording_gridworld_creation():
 
 def test_obstacles_always_appear_with_the_same_probability():
     headlight_range = 4
-    patient = DrivingGridworld(
+    patient = DrivingGridworld.legacy_constructor(
         headlight_range,
         num_bumps=0,
         num_pedestrians=1,
@@ -143,7 +143,7 @@ def test_obstacles_always_appear_with_the_same_probability():
                          [DrivingGridworld.play, DrivingGridworld.fast_play])
 def test_crashing_into_left_wall(method):
     discount_mdp = 0.9
-    patient = DrivingGridworld(
+    patient = DrivingGridworld.legacy_constructor(
         headlight_range=1,
         num_bumps=0,
         num_pedestrians=0,
@@ -167,7 +167,7 @@ def test_crashing_into_left_wall(method):
                          [DrivingGridworld.play, DrivingGridworld.fast_play])
 def test_crashing_into_right_wall(method):
     discount_mdp = 0.9
-    patient = DrivingGridworld(
+    patient = DrivingGridworld.legacy_constructor(
         headlight_range=1,
         num_bumps=0,
         num_pedestrians=0,
