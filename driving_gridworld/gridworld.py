@@ -17,8 +17,6 @@ class DrivingGridworld(object):
                  bump_appearance_prob=0.2,
                  pedestrian_appearance_prob=0.2,
                  car_col=2):
-        self.the_plot = {}
-        self.game_over = False
         self._initial_speed = speed
         self._discount = discount
         self._car_col = car_col
@@ -30,10 +28,6 @@ class DrivingGridworld(object):
         self._pedestrian_appearance_prob = pedestrian_appearance_prob
 
         self.reset()
-
-        # For compatibility with pycolab croppers.
-        self.things = []
-        self.backdrop = self.Backdrop([])
 
     def reset(self):
         self.game_over = False
@@ -49,6 +43,12 @@ class DrivingGridworld(object):
         ]
         self.road = Road(self._headlight_range, self.car,
                          initial_bumps + initial_pedestrians)
+
+        # For compatibility with pycolab croppers.
+        self.the_plot = {}
+        self.things = []
+        self.backdrop = self.Backdrop([])
+
         return self
 
     def its_showtime(self):
