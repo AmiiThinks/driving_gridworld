@@ -53,13 +53,20 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
         assert probs[0] == 1 - sum([obst.prob_of_appearing / 4] * 4)
 
 
-@pytest.mark.parametrize("action", ACTIONS)
+@pytest.mark.parametrize("action", [UP, DOWN, RIGHT, NO_OP])
 @pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
-def test_driving_faster_gives_a_larger_reward(action, current_speed):
+def test_driving_faster_gives_a_larger_reward_in_left_lane(action, current_speed):
     road_test = Road(4, Car(1, current_speed))
     for next_state, prob, reward in road_test.successors(action):
-        assert reward == current_speed - 1.0 - int(action == LEFT
-                                                   or action == RIGHT)
+        assert reward == current_speed - 1.0 - int(action == RIGHT)
+
+
+@pytest.mark.parametrize("action", [UP, DOWN, LEFT, NO_OP])
+@pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
+def test_driving_faster_gives_a_larger_reward_in_right_lane(action, current_speed):
+    road_test = Road(4, Car(2, current_speed))
+    for next_state, prob, reward in road_test.successors(action):
+        assert reward == current_speed - 1.0 - int(action == LEFT)
 
 
 @pytest.mark.parametrize("car", [Car(0, 1), Car(3, 1)])

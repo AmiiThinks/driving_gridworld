@@ -176,8 +176,10 @@ class Road(object):
             reward += self._car.reward(action)
 
             if self.is_off_road():
-                reward -= np.random.normal(2 * distance * self._car.speed,
+                reward -= np.random.normal(2 * distance,
                                            self._stddev * self._car.speed)
+            elif self.is_off_road(next_car):
+                reward -= np.random.normal(2, self._stddev * self._car.speed)
             next_road = self.__class__(
                 self._headlight_range,
                 next_car,
@@ -187,8 +189,9 @@ class Road(object):
                     self._allowed_obstacle_appearance_columns))
             yield next_road, prob, reward
 
-    def is_off_road(self):
-        return self._car.col <= 0 or self._car.col >= self._max_lane_idx
+    def is_off_road(self, car=None):
+        if car is None: car = self._car
+        return car.col <= 0 or car.col >= self._max_lane_idx
 
     def has_crashed(self, car=None):
         if car is None: car = self._car
