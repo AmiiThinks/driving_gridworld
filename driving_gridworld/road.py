@@ -124,20 +124,6 @@ class Road(object):
                 if self.is_valid_configuration(revealed):
                     yield revealed
 
-    def collision_occurred(self, obs, obs_is_revealed, next_obstacle,
-                           next_car):
-        if next_obstacle.col == next_car.col:
-            obstacle_was_in_front_of_car = (obs.row < self._car_row()
-                                            or obs_is_revealed)
-            car_ran_over_obstacle = (obstacle_was_in_front_of_car
-                                     and next_obstacle.row >= self._car_row())
-            car_changed_lanes = self._car.col != next_car.col
-            car_changed_lanes_into_obstacle = (car_changed_lanes
-                                               and self._car_row() == obs.row)
-            return car_changed_lanes_into_obstacle or car_ran_over_obstacle
-        else:
-            return False
-
     def successors(self, action):
         '''Generates successor, probability, reward tuples.
 
@@ -148,12 +134,13 @@ class Road(object):
             float: The reward given the current state, action, and successor
                    state. The reward function is deterministic.
         '''
+        distance = self._car.progress_toward_destination(action)
         next_car = self._car.next(action, self.speed_limit())
-        if self.has_crashed() or self.has_crashed(next_car):
-            distance = 0
+        if self.has_crashed(next_car):
             next_car.speed = 0
-        else:
-            distance = self._car.progress_toward_destination(action)
+
+        min_col = min(self._car.col, next_car.col)
+        max_col = max(self._car.col, next_car.col)
 
         for revealed in self.every_combination_of_revealed_obstacles(distance):
             prob = 1.0
@@ -177,8 +164,10 @@ class Road(object):
                     prob *= (1.0 - p)**distance
                 next_obstacles.append(next_obstacle)
 
-                if (self.collision_occurred(obs, obs_is_revealed,
-                                            next_obstacle, next_car)):
+                if (
+                    min_col <= next_obstacle.col <= max_col
+                    and max(obs.row, 0) <= self._car_row() <= next_obstacle.row
+                ):  # yapf: disable
                     reward += next_obstacle.reward_for_collision(
                         self._car.speed, self._stddev)
             reward += self._car.reward(action)
