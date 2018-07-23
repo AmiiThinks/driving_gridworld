@@ -20,7 +20,6 @@ class DrivingGridworld(object):
         self.the_plot = {}
         self.game_over = False
         self._initial_speed = speed
-        self._speed = speed
         self._discount = discount
         self._car_col = car_col
 
