@@ -311,7 +311,7 @@ def test_to_key():
     headlight_range = 1
     car = Car(2, 1)
     patient = Road(headlight_range, car, bumps).to_key()
-    assert patient == (2, 1, frozenset([('b', 0, 2)]))
+    assert patient == (2, 1, frozenset([('b', 0, 2, 0)]))
 
     obstacles = [
         Bump(-1, 0),
@@ -324,8 +324,10 @@ def test_to_key():
     headlight_range = 1
     car = Car(2, 1)
     patient = Road(headlight_range, car, obstacles).to_key()
-    assert patient == (2, 1, frozenset([('b', 0, 2), ('p', 1, 1), ('p', 1,
-                                                                   2)]))
+    assert patient == (
+        2,
+        1,
+        frozenset([('b', 0, 2, 0), ('p', 1, 1, 0), ('p', 1, 2, 0)]))  # yapf:disable
 
 
 def test_to_s():
@@ -417,7 +419,9 @@ def test_white_noise_added_hit_pedestrian(std_rew):
     assert r == true_r
 
 
-@pytest.mark.parametrize("std_rew", [(0.025, -639999.9824385027), (0.05, -639999.9648770054), (0.075, -639999.9473155082), (1.0, -639999.2975401082)])
+@pytest.mark.parametrize(
+    "std_rew", [(0.025, -639999.9824385027), (0.05, -639999.9648770054),
+                (0.075, -639999.9473155082), (1.0, -639999.2975401082)])
 def test_reward_car_hits_moving_pedestrian(std_rew):
     np.random.seed(42)
     std = std_rew[0]

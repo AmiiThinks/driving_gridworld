@@ -65,16 +65,19 @@ class Road(object):
 
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
-                and self._car == other._car
+                and self._stddev == other._stddev and self._car == other._car
                 and self._obstacles == other._obstacles
-                and self._stddev == other._stddev)
+                and (self._allowed_obstacle_appearance_columns ==
+                     other._allowed_obstacle_appearance_columns))
 
     def copy(self):
         return self.__class__(
             self._headlight_range,
             self._car,
             self._obstacles,
-            stddev=self._stddev)
+            stddev=self._stddev,
+            allowed_obstacle_appearance_columns=(
+                self._allowed_obstacle_appearance_columns))
 
     def _car_row(self):
         return self._headlight_range
@@ -195,7 +198,7 @@ class Road(object):
         obstacles = []
         for o in self._obstacles:
             if self.obstacle_is_visible(o):
-                obstacles.append((str(o), o.row, o.col))
+                obstacles.append((str(o), o.row, o.col, o.speed))
         return (self._car.col, self._car.speed, frozenset(obstacles))
 
     def to_s(self):
