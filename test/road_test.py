@@ -33,13 +33,13 @@ def test_transition_probs_with_one_obstacle_are_1(obst, action):
     assert probs == [1.0]
 
 
+
 @pytest.mark.parametrize("obst", [Bump(-1, -1), Pedestrian(0, -1)])
 @pytest.mark.parametrize("action", ACTIONS)
 def test_transition_probs_with_invisible_obstacle(obst, action):
     headlight_range = 2
     road_test = Road(headlight_range, Car(1, 1), [obst])
     probs = [prob for next_state, prob, reward in road_test.successors(action)]
-
     if action == LEFT or action == RIGHT:
         assert probs == [1.0]
     else:
@@ -441,3 +441,16 @@ def test_reward_car_hits_moving_pedestrian(std_rew):
     successors_list = list(road.successors(NO_OP))
     r = successors_list[0][2]
     assert r == true_r
+
+
+@pytest.mark.parametrize("obst", [Bump(5, 2), Bump(-1, -1), Pedestrian(-1, 5)])
+@pytest.mark.parametrize("action", ACTIONS)
+def test_car_moves_before_invisible_obstacles_are_revealed(obst, action):
+    headlight_range = 4
+    car = Car(1, 1)
+    road = Road(headlight_range, car, [obst])
+    successor_list = road.successors(action)
+    for next_state, prob, reward in successor_list:
+        for obstacle in next_state._obstacles:
+            assert (obstacle.row < 0 or obstacle.row > headlight_range) or (
+                obstacle.col < 0 or obstacle.col > 3)
