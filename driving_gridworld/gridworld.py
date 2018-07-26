@@ -85,14 +85,12 @@ class DrivingGridworld(object):
             return road.observation(), reward, discount
 
     def fast_play(self, a):
-        self.road, reward = self.road.sample_transition(a)
+        self.road = self.road.sample_transition(a)
         discount = self._discount
         if self.road.has_crashed():
             self.game_over = True
-            reward += (self.road.reward_for_being_in_transit /
-                       (1.0 - self._discount))
             discount = 0.0
-        return self.road, reward, discount
+        return self.road, 0, discount
 
     def observation_to_key(self, o):
         ascii_board_rows = [
