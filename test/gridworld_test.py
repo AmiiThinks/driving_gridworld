@@ -111,12 +111,14 @@ def test_obstacles_always_appear_with_the_same_probability():
     successors = tuple(patient.road.successors(NO_OP))
     for s, prob, r in successors:
         x_obstacles, x_prob, x_r = all_x.pop()
-        assert s.to_key()[-1] == x_obstacles
+        s_prime_successors = tuple(s.successors(NO_OP))
+        for s_prime, prob_prime, r_prime in s_prime_successors:
+            assert s_prime.to_key()[-1] == x_obstacles
         assert prob == x_prob
         assert r == x_r
 
     patient.road = successors[1][0]
-    for _ in range(headlight_range):
+    for _ in range(headlight_range+1):
         patient.play(NO_OP)
 
     assert patient.road.to_s() == '|d  d| \n|d  d| \n|d  d| \n|d  d| \n|dpCd|^'
@@ -134,7 +136,9 @@ def test_obstacles_always_appear_with_the_same_probability():
     successors = tuple(patient.road.successors(NO_OP))
     for s, prob, r in successors:
         x_obstacles, x_prob, x_r = all_x.pop()
-        assert s.to_key()[-1] == x_obstacles
+        s_prime_successors = tuple(s.successors(NO_OP))
+        for s_prime, prob_prime, r_prime in s_prime_successors:
+            assert s_prime.to_key()[-1] == x_obstacles
         assert prob == x_prob
         assert r == x_r
 

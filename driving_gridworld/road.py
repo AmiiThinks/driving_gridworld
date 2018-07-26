@@ -10,6 +10,69 @@ def _byte(c, encoding='ascii'):
 def permutation_combination_pairs(a, b, n):
     return product(permutations(a, n), combinations(b, n))
 
+# # rewards for each obstacle in the current road
+# def reward_for_collision(current_road, obstacle, stddev=0.0):
+#     return np.random.normal(current_road.expected_reward_for_collision(current_road.car.speed, obstacle),
+#         np.sqrt(np.square(stddev * current_road.car.speed) + np.square(stddev * obstacle.speed)))
+#
+# def expected_reward_for_collision(current_road, obstacle): # with no noise
+#     if isinstance(obstacle, Bump):
+#         return -2 * (current_road.car.speed + obstacle.speed)
+#     else:
+#         return -8e2**(current_road.car.speed + obstacle.speed)
+#
+# #rewards for car object in the current road
+# def reward(current_road, action):
+#     return float(current_road.car.progress_toward_destination(action))
+#
+# # overall reward as we transition from the current road to the next road:
+# def reward_factory(current_road, action, successor_road):
+#     # distance travelled by the car in current road
+#     distance = current_road._car.progress_toward_destination(action)
+#     next_car = current_road._car.next(action, self.speed_limit()) # returns next car instance: the column and speed
+#
+#     min_col = min(current_road._car.col, successor_road._car.col)
+#     max_col = max(current_road._car.col, successor_road._car.col)
+#     # min_col = min(self._car.col, next_car.col)
+#     # max_col = max(self._car.col, next_car.col)
+#
+#     # check if there was a reward_for_collision
+#     for obstacle in current_road.obstacles:
+#         if (obstacle.col == current_road._car.col) and
+#
+#     for revealed in self.every_combination_of_revealed_obstacles(distance):
+#         next_obstacles = []
+#         reward = current_road.reward_for_being_in_transit
+#         ### left off here
+#
+#         for i in range(len(self._obstacles)):
+#             obs = self._obstacles[i]
+#             obs_is_revealed = i in revealed
+#             if obs_is_revealed:
+#                 next_obstacle = obs.copy_at_position(*revealed[i])
+#             else:
+#                 next_obstacle = obs.next(distance)
+#             next_obstacles.append(next_obstacle)
+#             # check if the moved obstacle has collided with the car:
+#             ### ????
+#             if (
+#                 min_col <= next_obstacle.col <= max_col
+#                 and max(obs.row, 0) <= self._car_row() <= next_obstacle.row
+#             ):  # yapf: disable
+#             # self = current_road
+#                 reward += self.reward_for_collision(
+#                     self._car.speed, next_obstacle, stddev)
+#         # add reward for making progress toward destination.
+#         reward += self._car.reward(action)
+#         # subtract reward for current car being off road
+#         if self.is_off_road():
+#             reward -= np.random.normal(2 * distance,
+#                                        self._stddev * self._car.speed)
+#         # subtract reward for next car being off road
+#         elif self.is_off_road(next_car):
+#             reward -= np.random.normal(2, self._stddev * self._car.speed)
+#     pass
+
 
 class Road(object):
     # Drivable road definitions
@@ -127,6 +190,7 @@ class Road(object):
                 if self.is_valid_configuration(revealed):
                     yield revealed
 
+
     def successors(self, action):
         '''Generates successor, probability, reward tuples.
 
@@ -157,27 +221,32 @@ class Road(object):
 
                 obs_is_revealed = i in revealed
                 if obs_is_revealed:
-                    next_obstacle = obs.copy_at_position(*revealed[i])
+                    temp_list = list(revealed[i])
+                    temp_list[0] -= distance
+                    revealed_i = tuple(temp_list)
+                    next_obstacle = obs.copy_at_position(*revealed_i)
                     prob_not_appearing_closer = ((1.0 - p)**(
-                        next_obstacle.row - distance + 1))
+                        revealed_i[0] + 1))
                     prob_appearing_in_row = p * prob_not_appearing_closer
                     prob *= prob_appearing_in_row / float(self._num_lanes)
                 else:
                     next_obstacle = obs.next(distance)
                     prob *= (1.0 - p)**distance
                 next_obstacles.append(next_obstacle)
-
+                # check if the moved obstacle has collided with the car:
                 if (
                     min_col <= next_obstacle.col <= max_col
                     and max(obs.row, 0) <= self._car_row() <= next_obstacle.row
                 ):  # yapf: disable
                     reward += next_obstacle.reward_for_collision(
                         self._car.speed, self._stddev)
+            # add reward for making progress toward destination.
             reward += self._car.reward(action)
-
+            # subtract reward for current car being off road
             if self.is_off_road():
                 reward -= np.random.normal(2 * distance,
                                            self._stddev * self._car.speed)
+            # subtract reward for next car being off road
             elif self.is_off_road(next_car):
                 reward -= np.random.normal(2, self._stddev * self._car.speed)
             next_road = self.__class__(
