@@ -3,7 +3,7 @@ from driving_gridworld.road import Road
 from driving_gridworld.road import \
     reward_for_collision, \
     expected_reward_for_collision, \
-    reward_factory
+    reward
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
@@ -37,7 +37,6 @@ def test_transition_probs_with_one_obstacle_are_1(obst, action):
     assert probs == [1.0]
 
 
-
 @pytest.mark.parametrize("obst", [Bump(-1, -1), Pedestrian(0, -1)])
 @pytest.mark.parametrize("action", ACTIONS)
 def test_transition_probs_with_invisible_obstacle(obst, action):
@@ -60,7 +59,8 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
 @pytest.mark.skip(reason="Changing reward function")
 @pytest.mark.parametrize("action", [UP, DOWN, RIGHT, NO_OP])
 @pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
-def test_driving_faster_gives_a_larger_reward_in_left_lane(action, current_speed):
+def test_driving_faster_gives_a_larger_reward_in_left_lane(
+        action, current_speed):
     road_test = Road(4, Car(1, current_speed))
     for next_state, prob, reward in road_test.successors(action):
         assert reward == current_speed - 1.0 - int(action == RIGHT)
@@ -69,7 +69,8 @@ def test_driving_faster_gives_a_larger_reward_in_left_lane(action, current_speed
 @pytest.mark.skip(reason="Changing reward function")
 @pytest.mark.parametrize("action", [UP, DOWN, LEFT, NO_OP])
 @pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
-def test_driving_faster_gives_a_larger_reward_in_right_lane(action, current_speed):
+def test_driving_faster_gives_a_larger_reward_in_right_lane(
+        action, current_speed):
     road_test = Road(4, Car(2, current_speed))
     for next_state, prob, reward in road_test.successors(action):
         assert reward == current_speed - 1.0 - int(action == LEFT)
@@ -405,6 +406,7 @@ def test_white_noise_added_reward_off_road(col, std_rew):
     r = successors_list[0][2]
     assert r == true_r
 
+
 @pytest.mark.skip(reason="Changing reward function")
 @pytest.mark.parametrize(
     "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
@@ -453,16 +455,3 @@ def test_reward_car_hits_moving_pedestrian(std_rew):
     successors_list = list(road.successors(NO_OP))
     r = successors_list[0][2]
     assert r == true_r
-
-
-@pytest.mark.parametrize("obst", [Bump(5, 2), Bump(-1, -1), Pedestrian(-1, 5)])
-@pytest.mark.parametrize("action", ACTIONS)
-def test_car_moves_before_invisible_obstacles_are_revealed(obst, action):
-    headlight_range = 4
-    car = Car(1, 1)
-    road = Road(headlight_range, car, [obst])
-    successor_list = road.successors(action)
-    for next_state, prob in successor_list:
-        for obstacle in next_state._obstacles:
-            assert (obstacle.row < 0 or obstacle.row > headlight_range) or (
-                obstacle.col < 0 or obstacle.col > 3)
