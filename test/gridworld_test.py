@@ -89,7 +89,7 @@ def test_recording_gridworld_creation():
     expected_recorded.append((patient.road.copy(), reward, discount, 0))
     assert patient.recorded() == expected_recorded
 
-@pytest.mark.skip(reason="Changing the reward function.")
+
 def test_obstacles_always_appear_with_the_same_probability():
     headlight_range = 4
     patient = DrivingGridworld.legacy_constructor(
@@ -101,24 +101,21 @@ def test_obstacles_always_appear_with_the_same_probability():
         pedestrian_appearance_prob=0.01)
 
     all_x = [
-        (frozenset(), 0.99, 0.0),
-        (frozenset([('p', 0, 1, 0)]), 0.0025, 0.0),
-        (frozenset([('p', 0, 3, 0)]), 0.0025, 0.0),
-        (frozenset([('p', 0, 0, 0)]), 0.0025, 0.0),
-        (frozenset([('p', 0, 2, 0)]), 0.0025, 0.0)
+        (frozenset(), 0.99),
+        (frozenset([('p', 0, 1, 0)]), 0.0025),
+        (frozenset([('p', 0, 3, 0)]), 0.0025),
+        (frozenset([('p', 0, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 2, 0)]), 0.0025)
     ]  # yapf:disable
     all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))
-    for s, prob, r in successors:
-        x_obstacles, x_prob, x_r = all_x.pop()
-        s_prime_successors = tuple(s.successors(NO_OP))
-        for s_prime, prob_prime, r_prime in s_prime_successors:
-            assert s_prime.to_key()[-1] == x_obstacles
+    for s, prob in successors:
+        x_obstacles, x_prob = all_x.pop()
+        assert s.to_key()[-1] == x_obstacles
         assert prob == x_prob
-        assert r == x_r
 
     patient.road = successors[1][0]
-    for _ in range(headlight_range+1):
+    for _ in range(headlight_range):
         patient.play(NO_OP)
 
     assert patient.road.to_s() == '|d  d| \n|d  d| \n|d  d| \n|d  d| \n|dpCd|^'
@@ -126,24 +123,20 @@ def test_obstacles_always_appear_with_the_same_probability():
     assert patient.road.to_s() == '|d  d| \n|d  d| \n|d  d| \n|d  d| \n|d Cd|^'
 
     all_x = [
-        (frozenset(), 0.99, 0.0),
-        (frozenset([('p', 0, 1, 0)]), 0.0025, 0.0),
-        (frozenset([('p', 0, 3, 0)]), 0.0025, 0.0),
-        (frozenset([('p', 0, 0, 0)]), 0.0025, 0.0),
-        (frozenset([('p', 0, 2, 0)]), 0.0025, 0.0)
+        (frozenset(), 0.99),
+        (frozenset([('p', 0, 1, 0)]), 0.0025),
+        (frozenset([('p', 0, 3, 0)]), 0.0025),
+        (frozenset([('p', 0, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 2, 0)]), 0.0025)
     ]  # yapf:disable
     all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))
-    for s, prob, r in successors:
-        x_obstacles, x_prob, x_r = all_x.pop()
-        s_prime_successors = tuple(s.successors(NO_OP))
-        for s_prime, prob_prime, r_prime in s_prime_successors:
-            assert s_prime.to_key()[-1] == x_obstacles
+    for s, prob in successors:
+        x_obstacles, x_prob = all_x.pop()
+        assert s.to_key()[-1] == x_obstacles
         assert prob == x_prob
-        assert r == x_r
 
 
-@pytest.mark.skip(reason="Changing the reward function.")
 @pytest.mark.parametrize('method',
                          [DrivingGridworld.play, DrivingGridworld.fast_play])
 def test_crashing_into_left_wall(method):
@@ -158,17 +151,11 @@ def test_crashing_into_left_wall(method):
     assert patient.road.has_crashed()
     assert patient.game_over
     assert discount == 0.0
-    assert (
-        reward == pytest.approx(
-            patient.road.reward_for_being_in_transit
-            + patient.road.reward_for_being_in_transit / (1 - discount_mdp)
-        )
-    )  # yapf:disable
+    assert reward == 0.0
     assert patient.road.to_key() == (-1, 0, frozenset())
     assert patient.road.to_s() == '|d  d| \nCd  d| '
 
 
-@pytest.mark.skip(reason="Changing the reward function.")
 @pytest.mark.parametrize('method',
                          [DrivingGridworld.play, DrivingGridworld.fast_play])
 def test_crashing_into_right_wall(method):
@@ -183,11 +170,6 @@ def test_crashing_into_right_wall(method):
     assert patient.road.has_crashed()
     assert patient.game_over
     assert discount == 0.0
-    assert (
-        reward == pytest.approx(
-            patient.road.reward_for_being_in_transit
-            + patient.road.reward_for_being_in_transit / (1 - discount_mdp)
-        )
-    )  # yapf:disable
+    assert reward == 0.0
     assert patient.road.to_key() == (4, 0, frozenset())
     assert patient.road.to_s() == '|d  d| \n|d  dC '
