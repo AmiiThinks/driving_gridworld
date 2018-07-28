@@ -3,6 +3,7 @@ import numpy as np
 from pycolab.rendering import Observation
 from driving_gridworld.obstacles import Bump
 
+
 def _byte(c, encoding='ascii'):
     return bytes(c, encoding)[0]
 
@@ -11,19 +12,22 @@ def permutation_combination_pairs(a, b, n):
     return product(permutations(a, n), combinations(b, n))
 
 
-def reward_for_collision(current_car, obstacle, stddev):
-    return np.random.normal(expected_reward_for_collision(current_car.speed, obstacle),
-        np.sqrt(np.square(stddev * current_car.speed) + np.square(stddev * obstacle.speed)))
+def reward_for_collision(current_car, obstacle, stddev=0.0):
+    return np.random.normal(
+        expected_reward_for_collision(current_car.speed, obstacle),
+        np.sqrt(
+            np.square(stddev * current_car.speed) +
+            np.square(stddev * obstacle.speed)))
 
 
-def expected_reward_for_collision(car_speed, obstacle): # with no noise
+def expected_reward_for_collision(car_speed, obstacle):
     if isinstance(obstacle, Bump):
         return -2 * (car_speed + obstacle.speed)
     else:
         return -8e2**(car_speed + obstacle.speed)
 
 
-def reward_factory(s, a, s_prime, stddev=0.0):
+def reward(s, a, s_prime, stddev=0.0):
     reward = s.reward_for_being_in_transit
     distance = s.car.progress_toward_destination(a)
     min_col = min(s.car.col, s_prime.car.col)
@@ -78,7 +82,6 @@ class Road(object):
                  headlight_range,
                  car,
                  obstacles=[],
-                 stddev=0.0,
                  allowed_obstacle_appearance_columns=None):
         self._headlight_range = headlight_range
 
@@ -88,7 +91,6 @@ class Road(object):
                     car.speed, self.speed_limit()))
         self._car = car
         self._obstacles = obstacles
-        self._stddev = stddev
 
         if allowed_obstacle_appearance_columns is None:
             allowed_obstacle_appearance_columns = [
@@ -103,7 +105,7 @@ class Road(object):
 
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
-                and self._stddev == other._stddev and self._car == other._car
+                and self._car == other._car
                 and self._obstacles == other._obstacles
                 and (self._allowed_obstacle_appearance_columns ==
                      other._allowed_obstacle_appearance_columns))
@@ -113,7 +115,6 @@ class Road(object):
             self._headlight_range,
             self._car,
             self._obstacles,
-            stddev=self._stddev,
             allowed_obstacle_appearance_columns=(
                 self._allowed_obstacle_appearance_columns))
 
@@ -189,12 +190,9 @@ class Road(object):
 
                 obs_is_revealed = i in revealed
                 if obs_is_revealed:
-                    temp_list = list(revealed[i])
-                    temp_list[0] -= distance
-                    revealed_i = tuple(temp_list)
-                    next_obstacle = obs.copy_at_position(*revealed_i)
+                    next_obstacle = obs.copy_at_position(*revealed[i])
                     prob_not_appearing_closer = ((1.0 - p)**(
-                        revealed_i[0] + 1))
+                        next_obstacle.row - distance + 1))
                     prob_appearing_in_row = p * prob_not_appearing_closer
                     prob *= prob_appearing_in_row / float(self._num_lanes)
                 else:
@@ -206,7 +204,6 @@ class Road(object):
                 self._headlight_range,
                 next_car,
                 obstacles=next_obstacles,
-                stddev=self._stddev,
                 allowed_obstacle_appearance_columns=(
                     self._allowed_obstacle_appearance_columns))
             yield next_road, prob
