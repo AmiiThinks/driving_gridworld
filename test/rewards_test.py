@@ -15,33 +15,34 @@ import pytest
 def test_all_entries_in_u_vector_are_greater_than_d_vector():
     hlr = 4
     u, C, d, H = sample_reward_parameters(hlr)
-    for i in range(0, hlr+2):
+    for i in range(0, hlr + 2):
         assert u[i] > d[i]
 
 
-def test_all_entries_in_u_vector_are_greater_than_C_matrix_which_are_greater_than_H_matrix():
+def test_all_entries_in_u_vector_are_greater_than_C_matrix_which_are_greater_than_H_matrix(
+):
     hlr = 4
     u, C, d, H = sample_reward_parameters(hlr)
-    for i in range(0, hlr+2):
-        for j in range(0, hlr+1):
-            assert u[i] > C[i,j] > H[i,j]
+    for i in range(0, hlr + 2):
+        for j in range(0, hlr + 1):
+            assert u[i] > C[i, j] > H[i, j]
 
 
 def test_all_entries_in_d_vector_are_greater_than_H_matrix():
     hlr = 4
     u, C, d, H = sample_reward_parameters(hlr)
-    for i in range(0, hlr+2):
-        for j in range(0, hlr+1):
-            assert d[i] > H[i,j]
+    for i in range(0, hlr + 2):
+        for j in range(0, hlr + 1):
+            assert d[i] > H[i, j]
 
 
 def test_hit_a_moving_obstacle_with_higher_speed_gives_lower_reward():
     hlr = 4
     u, C, d, H = sample_reward_parameters(hlr)
-    for i in range(0, hlr+2):
-        for j in range(1, hlr+1):
-            assert C[i, j-1] > C[i, j]
-            assert H[i, j-1] > H[i, j]
+    for i in range(0, hlr + 2):
+        for j in range(1, hlr + 1):
+            assert C[i, j - 1] > C[i, j]
+            assert H[i, j - 1] > H[i, j]
 
 
 def test_collision_gives_lower_deterministic_reward_than_no_collision():
@@ -91,7 +92,11 @@ def test_collision_gives_lower_stochastic_reward_than_no_collision():
 def test_hit_more_obstacles_gives_lower_deterministic_reward():
     np.random.seed(42)
     hlr = 4
-    obst_list = [Bump(-1, 1, speed=4), Bump(-1, 1, speed=4), Bump(-1, 1, speed=4)]
+    obst_list = [
+        Bump(-1, 1, speed=4),
+        Bump(-1, 1, speed=4),
+        Bump(-1, 1, speed=4)
+    ]
     action = NO_OP
     car = Car(1, 1)
     u, C, d, H = sample_reward_parameters(hlr)
@@ -111,7 +116,11 @@ def test_hit_more_obstacles_gives_lower_deterministic_reward():
 def test_hit_more_obstacles_gives_lower_stochastic_reward():
     np.random.seed(42)
     hlr = 4
-    obst_list = [Bump(-1, 1, speed=4), Bump(-1, 1, speed=4), Bump(-1, 1, speed=4)]
+    obst_list = [
+        Bump(-1, 1, speed=4),
+        Bump(-1, 1, speed=4),
+        Bump(-1, 1, speed=4)
+    ]
     action = NO_OP
     car = Car(1, 1)
     sto_rew_func = Stochastic_Reward()
@@ -130,7 +139,7 @@ def test_hit_more_obstacles_gives_lower_stochastic_reward():
 def test_driving_faster_no_obstacles_gives_larger_reward():
     np.random.seed(42)
     headlight_range = 4
-    action =  NO_OP
+    action = NO_OP
     u, c, d, h = sample_reward_parameters(headlight_range)
     det_rew_list = list()
     sto_rew_list = list()
@@ -148,11 +157,12 @@ def test_driving_faster_no_obstacles_gives_larger_reward():
         sto_rew_list.append(sto_r)
 
     for i in range(1, headlight_range + 2):
-        assert det_rew_list[i-1] < det_rew_list[i]
-        assert sto_rew_list[i-1] < sto_rew_list[i]
+        assert det_rew_list[i - 1] < det_rew_list[i]
+        assert sto_rew_list[i - 1] < sto_rew_list[i]
 
 
-def test_deterministic_reward_is_negative_one_when_car_hits_moving_pedestrian():
+def test_deterministic_reward_is_negative_one_when_car_hits_moving_pedestrian(
+):
     np.random.seed(42)
     hlr = 4
     obst_list = [Pedestrian(-1, 1, speed=4)]
