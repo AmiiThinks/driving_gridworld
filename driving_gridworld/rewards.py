@@ -84,8 +84,5 @@ class Stochastic_Reward(object):
         self.bias = bias_term()
 
     def __call__(self, s, a, s_p):
-        num_obst = len(s._obstacles)
-        hlr = s._headlight_range
-        u, C, d, H = sample_reward_parameters(hlr)
-        reward = r(u, C, d, H, s, a, s_p)
+        reward = r(*sample_reward_parameters(s._headlight_range), s, a, s_p)
         return reward + self.bias
