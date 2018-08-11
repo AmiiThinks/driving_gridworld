@@ -40,43 +40,32 @@ def sample_reward_parameters(headlight_range):
     return u_vec, C, d_vec, H
 
 
-def reward_for_collision_bump(distance, car_new_col, C, H, obst_speed):
-    if 1 <= car_new_col <= 2:
-        return C[distance, obst_speed]
-    else:
-        return H[distance, obst_speed]
-
-
 def r(u, C, d, H, s, a, s_prime):
-    reward = 0
-    distance = s.car.progress_toward_destination(a)
     min_col = min(s.car.col, s_prime.car.col)
     max_col = max(s.car.col, s_prime.car.col)
-    num_obstacles_collided = 0
-    collided_obstacles_speed = list()
-    for i in range(len(s._obstacles)): #suppose we only have 1 obstacle.
+
+    def obstacle_could_encounter_car(obs, obs_prime):
+        return (min_col <= obs_prime.col <= max_col
+                and max(obs.row, 0) <= s._car_row() <= obs_prime.row)
+
+    collided_obstacles_speed = []
+    for i in range(len(s._obstacles)):
         obs = s._obstacles[i]
         next_obstacle = s_prime._obstacles[i]
-        if (
-            min_col <= next_obstacle.col <= max_col
-            and max(obs.row, 0) <= s._car_row() <= next_obstacle.row
-        ):  # yapf: disable
-            if isinstance(next_obstacle, Pedestrian):
+        if obstacle_could_encounter_car(obs, next_obstacle):
+            if isinstance(obs, Pedestrian):
                 return -1
             else:
-                collided_obstacles_speed.append(next_obstacle.speed)
-                num_obstacles_collided += 1
+                collided_obstacles_speed.append(obs.speed)
 
-    assert num_obstacles_collided == len(collided_obstacles_speed)
-    if num_obstacles_collided > 0:
-        for obst_speed in collided_obstacles_speed:
-            reward += reward_for_collision_bump(distance, s_prime.car.col, C, H, obst_speed)
+    distance = s.car.progress_toward_destination(a)
+    car_ends_up_off_the_road = 1 <= s_prime.car.col <= 2
+    if len(collided_obstacles_speed) > 0:
+        return (
+            C[distance, :] if car_ends_up_off_the_road else H[distance, :]
+        ).take(collided_obstacles_speed).sum()
     else:
-        if 1 <= s_prime.car.col <= 2:
-            reward += u[distance]
-        else:
-            reward += d[distance]
-    return reward
+        return u[distance] if car_ends_up_off_the_road else d[distance]
 
 
 class Deterministic_Reward(object):
