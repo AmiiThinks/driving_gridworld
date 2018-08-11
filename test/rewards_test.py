@@ -2,9 +2,7 @@ import numpy as np
 from driving_gridworld.rewards import Deterministic_Reward
 from driving_gridworld.rewards import Stochastic_Reward
 from driving_gridworld.rewards import \
-    bias_term, \
     sample_reward_parameters, \
-    reward_for_collision_bump, \
     r
 from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
