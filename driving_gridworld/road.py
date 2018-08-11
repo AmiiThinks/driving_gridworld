@@ -38,7 +38,7 @@ def reward(s, a, s_prime, stddev=0.0):
         next_obstacle = s_prime._obstacles[i]
         if (
             min_col <= next_obstacle.col <= max_col
-            and max(obs.row, 0) <= s._car_row() <= next_obstacle.row
+            and max(obs.row, 0) <= s.car_row() <= next_obstacle.row
         ):  # yapf: disable
             reward += reward_for_collision(s.car, next_obstacle, stddev)
     reward += distance
@@ -103,6 +103,10 @@ class Road(object):
     def car(self):
         return self._car
 
+    @property
+    def obstacles(self):
+        return self._obstacles
+
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
                 and self._car == other._car
@@ -118,7 +122,7 @@ class Road(object):
             allowed_obstacle_appearance_columns=(
                 self._allowed_obstacle_appearance_columns))
 
-    def _car_row(self):
+    def car_row(self):
         return self._headlight_range
 
     def _num_rows(self):
@@ -241,7 +245,7 @@ class Road(object):
 
     def car_layer(self):
         layer = np.full([self._num_rows(), self._stage_width], False)
-        layer[self._car_row(), self._car.col + self._stage_offset] = True
+        layer[self.car_row(), self._car.col + self._stage_offset] = True
         return layer
 
     def wall_layer(self):

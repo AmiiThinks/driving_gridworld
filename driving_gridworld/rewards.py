@@ -46,13 +46,11 @@ def r(u, C, d, H, s, a, s_prime):
 
     def obstacle_could_encounter_car(obs, obs_prime):
         return (min_col <= obs_prime.col <= max_col
-                and max(obs.row, 0) <= s._car_row() <= obs_prime.row)
+                and max(obs.row, 0) <= s.car_row() <= obs_prime.row)
 
     collided_obstacles_speed = []
-    for i in range(len(s._obstacles)):
-        obs = s._obstacles[i]
-        next_obstacle = s_prime._obstacles[i]
-        if obstacle_could_encounter_car(obs, next_obstacle):
+    for obs, obs_prime in zip(s.obstacles, s_prime.obstacles):
+        if obstacle_could_encounter_car(obs, obs_prime):
             if isinstance(obs, Pedestrian):
                 return -1
             else:
@@ -60,12 +58,13 @@ def r(u, C, d, H, s, a, s_prime):
 
     distance = s.car.progress_toward_destination(a)
     car_ends_up_off_the_road = 1 <= s_prime.car.col <= 2
-    if len(collided_obstacles_speed) > 0:
-        return (
+    return (
+        (
             C[distance, :] if car_ends_up_off_the_road else H[distance, :]
         ).take(collided_obstacles_speed).sum()
-    else:
-        return u[distance] if car_ends_up_off_the_road else d[distance]
+        if len(collided_obstacles_speed) > 0
+        else u[distance] if car_ends_up_off_the_road else d[distance]
+    )
 
 
 class Deterministic_Reward(object):
