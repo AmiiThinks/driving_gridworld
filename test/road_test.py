@@ -56,37 +56,6 @@ def test_transition_probs_with_invisible_obstacle(obst, action):
         assert probs[0] == 1 - sum([obst.prob_of_appearing / 4] * 4)
 
 
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize("action", [UP, DOWN, RIGHT, NO_OP])
-@pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
-def test_driving_faster_gives_a_larger_reward_in_left_lane(
-        action, current_speed):
-    road_test = Road(4, Car(1, current_speed))
-    for next_state, prob, reward in road_test.successors(action):
-        assert reward == current_speed - 1.0 - int(action == RIGHT)
-
-
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize("action", [UP, DOWN, LEFT, NO_OP])
-@pytest.mark.parametrize("current_speed", [1, 2, 3, 4])
-def test_driving_faster_gives_a_larger_reward_in_right_lane(
-        action, current_speed):
-    road_test = Road(4, Car(2, current_speed))
-    for next_state, prob, reward in road_test.successors(action):
-        assert reward == current_speed - 1.0 - int(action == LEFT)
-
-
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize("car", [Car(0, 1), Car(3, 1)])
-@pytest.mark.parametrize("action", ACTIONS)
-def test_receive_negative_reward_for_driving_off_the_road(car, action):
-    headlight_range = 4
-    obstacles = []
-    road_test = Road(headlight_range, car, obstacles)
-    for next_state, prob, reward in road_test.successors(action):
-        assert reward < 0
-
-
 @pytest.mark.parametrize("obst", [Bump(-1, -1), Pedestrian(0, -1)])
 @pytest.mark.parametrize("action", ACTIONS)
 @pytest.mark.parametrize("speed", [1, 2, 3])
@@ -285,44 +254,6 @@ def test_car_appears_over_dirt_and_pavement(col):
     assert patient[headlight_range, col + 1] == c.to_byte()
 
 
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize('row', [0, 1])
-def test_turning_into_an_obstacle_causes_a_collision(row):
-    bumps = [Bump(row, 2)]
-    headlight_range = 1
-    car = Car(1, 2)
-    patient = Road(headlight_range, car, bumps)
-
-    successors = list(patient.successors(RIGHT))
-    assert len(successors) == 1
-    s, p, r = successors[0]
-
-    assert p == 1.0
-    assert r == bumps[0].reward_for_collision(car.speed) + car.speed - 1 - 1.0
-
-    successors = list(patient.successors(NO_OP))
-    assert len(successors) == 1
-    s, p, r = successors[0]
-
-    assert p == 1.0
-    assert r == car.speed - 1.0
-
-
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize("action", ACTIONS)
-def test_car_cannot_change_langes_when_stopped(action):
-    car = Car(1, speed=0)
-    patient = Road(4, car)
-
-    successors = list(patient.successors(action))
-    assert len(successors) == 1
-    s, p, r = successors[0]
-
-    assert s._car.col == patient._car.col
-    assert p == 1
-    assert r == -1
-
-
 def test_to_key():
     bumps = [Bump(0, 2)]
     headlight_range = 1
@@ -389,69 +320,3 @@ def test_crashing_into_right_wall():
 
 def test_reward_for_being_in_transit():
     assert Road(4, Car(1, 1), []).reward_for_being_in_transit == -1.0
-
-
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize("col", [0, 3])
-@pytest.mark.parametrize(
-    "std_rew", [(0.025, -2.012417853825281), (0.05, -2.0248357076505616),
-                (0.075, -2.0372535614758425), (1.0, -2.496714153011233)])
-def test_white_noise_added_reward_off_road(col, std_rew):
-    np.random.seed(42)
-    std = std_rew[0]
-    true_r = std_rew[1]
-    car = Car(col, 1)
-    patient = Road(4, car, [], std)
-    successors_list = list(patient.successors(NO_OP))
-    r = successors_list[0][2]
-    assert r == true_r
-
-
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize(
-    "std_rew", [(0.025, -1.9875821461747192), (0.05, -1.9751642923494384),
-                (0.075, -1.9627464385241575), (1.0, -1.503285846988767)])
-def test_white_noise_added_hit_bump(std_rew):
-    np.random.seed(42)
-    std = std_rew[0]
-    true_r = std_rew[1]
-    obst = [Bump(3, 1)]
-    car = Car(1, 1)
-    patient = Road(4, car, obst, std)
-    successors_list = list(patient.successors(NO_OP))
-    r = successors_list[0][2]
-    assert r == true_r
-
-
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize(
-    "std_rew", [(0.025, -799.9875821461748), (0.05, -799.9751642923494),
-                (0.075, -799.9627464385242), (1.0, -799.5032858469888)])
-def test_white_noise_added_hit_pedestrian(std_rew):
-    np.random.seed(42)
-    std = std_rew[0]
-    true_r = std_rew[1]
-    obst = [Pedestrian(3, 1)]
-    car = Car(1, 1)
-    patient = Road(4, car, obst, std)
-    successors_list = list(patient.successors(NO_OP))
-    r = successors_list[0][2]
-    assert r == true_r
-
-
-@pytest.mark.skip(reason="Changing reward function")
-@pytest.mark.parametrize(
-    "std_rew", [(0.025, -639999.9824385027), (0.05, -639999.9648770054),
-                (0.075, -639999.9473155082), (1.0, -639999.2975401082)])
-def test_reward_car_hits_moving_pedestrian(std_rew):
-    np.random.seed(42)
-    std = std_rew[0]
-    true_r = std_rew[1]
-    obs = Pedestrian(2, 1)
-    obs.speed = 1
-    car = Car(1, 1)
-    headlight_range = 4
-    road = Road(headlight_range, car, [obs], std)
-    successors_list = list(road.successors(NO_OP))
-    r = successors_list[0][2]
-    assert r == true_r
