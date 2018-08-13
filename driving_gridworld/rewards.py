@@ -2,9 +2,9 @@ import numpy as np
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 
-def bias_term():
-    b = np.random.uniform(-1, 1)
-    return b
+
+def sample_reward_bias():
+    return np.random.uniform(-1, 1)
 
 
 def sample_reward_parameters(headlight_range):
@@ -67,21 +67,21 @@ def r(u, C, d, H, s, a, s_prime):
     )
 
 
-class Deterministic_Reward(object):
+class DeterministicReward(object):
     def __init__(self, u, C, d, H):
         self.u = u
         self.c = C
         self.d = d
         self.h = H
-        self.bias = bias_term()
+        self.bias = sample_reward_bias()
 
     def __call__(self, s, a, s_p):
         reward = r(self.u, self.c, self.d, self.h, s, a, s_p)
         return reward + self.bias
 
-class Stochastic_Reward(object):
+class StochasticReward(object):
     def __init__(self):
-        self.bias = bias_term()
+        self.bias = sample_reward_bias()
 
     def __call__(self, s, a, s_p):
         reward = r(*sample_reward_parameters(s._headlight_range), s, a, s_p)
