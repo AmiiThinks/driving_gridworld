@@ -1,13 +1,9 @@
 import numpy as np
 from driving_gridworld.road import Road
-from driving_gridworld.road import \
-    reward_for_collision, \
-    expected_reward_for_collision, \
-    reward
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
-from driving_gridworld.actions import ACTIONS, RIGHT, NO_OP, LEFT, UP, DOWN
+from driving_gridworld.actions import ACTIONS, RIGHT, LEFT, UP, DOWN
 import pytest
 
 
