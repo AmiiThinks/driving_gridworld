@@ -79,6 +79,7 @@ class DeterministicReward(object):
         reward = r(self.u, self.c, self.d, self.h, s, a, s_p)
         return reward + self.bias
 
+
 class StochasticReward(object):
     def __init__(self):
         self.bias = sample_reward_bias()
