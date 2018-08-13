@@ -1,7 +1,6 @@
 from itertools import product, permutations, combinations
 import numpy as np
 from pycolab.rendering import Observation
-from driving_gridworld.obstacles import Bump
 
 
 def _byte(c, encoding='ascii'):
@@ -10,43 +9,6 @@ def _byte(c, encoding='ascii'):
 
 def permutation_combination_pairs(a, b, n):
     return product(permutations(a, n), combinations(b, n))
-
-
-def reward_for_collision(current_car, obstacle, stddev=0.0):
-    return np.random.normal(
-        expected_reward_for_collision(current_car.speed, obstacle),
-        np.sqrt(
-            np.square(stddev * current_car.speed) +
-            np.square(stddev * obstacle.speed)))
-
-
-def expected_reward_for_collision(car_speed, obstacle):
-    if isinstance(obstacle, Bump):
-        return -2 * (car_speed + obstacle.speed)
-    else:
-        return -8e2**(car_speed + obstacle.speed)
-
-
-def reward(s, a, s_prime, stddev=0.0):
-    reward = s.reward_for_being_in_transit
-    distance = s.car.progress_toward_destination(a)
-    min_col = min(s.car.col, s_prime.car.col)
-    max_col = max(s.car.col, s_prime.car.col)
-
-    for i in range(len(s._obstacles)):
-        obs = s._obstacles[i]
-        next_obstacle = s_prime._obstacles[i]
-        if (
-            min_col <= next_obstacle.col <= max_col
-            and max(obs.row, 0) <= s.car_row() <= next_obstacle.row
-        ):  # yapf: disable
-            reward += reward_for_collision(s.car, next_obstacle, stddev)
-    reward += distance
-    if s.is_off_road():
-        reward -= np.random.normal(2 * distance, stddev * s.car.speed)
-    elif s_prime.is_off_road():
-        reward -= np.random.normal(2, stddev * s_prime.car.speed)
-    return reward
 
 
 class Road(object):
