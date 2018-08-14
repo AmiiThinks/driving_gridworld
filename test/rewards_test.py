@@ -6,7 +6,7 @@ from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
-from driving_gridworld.actions import NO_OP, LEFT, RIGHT
+from driving_gridworld.actions import NO_OP, ACTIONS
 import pytest
 from itertools import product
 
@@ -122,25 +122,19 @@ def test_reward_is_minimal_when_car_hits_moving_pedestrian(
     assert patient(s, NO_OP, sp) == patient.reward_for_critical_error
 
 
+@pytest.mark.parametrize("columns", [(0, -1), (3, 4)])
 @pytest.mark.parametrize("new_reward_function",
                          [determinstic_reward_function, StochasticReward])
-def test_crashing_into_left_wall(new_reward_function):
+@pytest.mark.parametrize("action", ACTIONS)
+def test_crashing_into_a_wall(columns, new_reward_function, action):
     np.random.seed(42)
     patient = new_reward_function()
 
-    s = new_road(car_col=0)
-    sp = new_road(car_col=-1)
+    s = new_road(car_col=columns[0])
+    sp = new_road(car_col=columns[1])
 
-    assert patient(s, LEFT, sp) == patient.reward_for_critical_error
+    assert not s.has_crashed()
+    assert sp.has_crashed()
 
-
-@pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward])
-def test_crashing_into_right_wall(new_reward_function):
-    np.random.seed(42)
-    patient = new_reward_function()
-
-    s = new_road(car_col=3)
-    sp = new_road(car_col=4)
-
-    assert patient(s, RIGHT, sp) == patient.reward_for_critical_error
+    assert patient(s, action, sp) == patient.reward_for_critical_error
+    assert patient(sp, action, sp) == patient.reward_for_critical_error
