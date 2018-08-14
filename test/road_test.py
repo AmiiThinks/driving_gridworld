@@ -312,7 +312,3 @@ def test_crashing_into_right_wall():
     assert s.to_key() != patient.to_key()
     assert s.to_key() == (4, 0, frozenset())
     assert s.to_s() == '|d  d| \n|d  dC '
-
-
-def test_reward_for_being_in_transit():
-    assert Road(4, Car(1, 1), []).reward_for_being_in_transit == -1.0
