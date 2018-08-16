@@ -38,7 +38,7 @@ class DrivingGridworld(object):
                            bump_appearance_prob=0.2,
                            pedestrian_appearance_prob=0.2,
                            car_col=2,
-                           reward_function=lambda *_, **__ : 0):
+                           reward_function=lambda *_, **__: 0):
         return cls(
             road_factory=(
                 lambda: simple_road_factory(
@@ -55,7 +55,10 @@ class DrivingGridworld(object):
             discount=discount
         )
 
-    def __init__(self, road_factory=simple_road_factory, discount=0.99, reward_function=lambda *_, **__ : 0):
+    def __init__(self,
+                 road_factory=simple_road_factory,
+                 discount=0.99,
+                 reward_function=lambda *_, **__: 0):
         self._reward_function = reward_function
         self._road_factory = road_factory
         self._discount = discount
@@ -94,7 +97,7 @@ class DrivingGridworld(object):
         discount = self._discount
         if self.road.has_crashed():
             self.game_over = True
-            reward = reward/(1 - discount)
+            reward /= 1.0 - discount
             discount = 0.0
         return self.road, reward, discount
 
