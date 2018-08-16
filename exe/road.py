@@ -13,6 +13,9 @@ import fire
 import numpy as np
 import pickle
 
+from driving_gridworld.rewards import DeterministicReward
+from driving_gridworld.rewards import sample_reward_parameters
+
 
 def save(data, path):
     with open(path + ".pkl", 'wb') as f:
@@ -48,7 +51,9 @@ def main(headlight_range=5,
             speed,
             discount=discount,
             bump_appearance_prob=bump_prob,
-            pedestrian_appearance_prob=pedestrian_prob)
+            pedestrian_appearance_prob=pedestrian_prob,
+            reward_function=DeterministicReward(
+                *sample_reward_parameters(headlight_range + 1)))
 
         game.ui_play()
     else:
@@ -61,7 +66,9 @@ def main(headlight_range=5,
             speed,
             discount=discount,
             bump_appearance_prob=bump_prob,
-            pedestrian_appearance_prob=pedestrian_prob)
+            pedestrian_appearance_prob=pedestrian_prob,
+            reward_function=DeterministicReward(
+                *sample_reward_parameters(headlight_range + 1)))
 
         observation, _, __ = game.its_showtime()
 

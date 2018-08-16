@@ -37,9 +37,10 @@ class DrivingGridworld(object):
                            discount=0.99,
                            bump_appearance_prob=0.2,
                            pedestrian_appearance_prob=0.2,
-                           car_col=2):
+                           car_col=2,
+                           reward_function=lambda *_, **__ : 0):
         return cls(
-            (
+            road_factory=(
                 lambda: simple_road_factory(
                     headlight_range=headlight_range,
                     num_bumps=num_bumps,
@@ -50,10 +51,12 @@ class DrivingGridworld(object):
                     pedestrian_appearance_prob=pedestrian_appearance_prob,
                     car_col=car_col)
             ),
+            reward_function=reward_function,
             discount=discount
         )
 
-    def __init__(self, road_factory=simple_road_factory, discount=0.99):
+    def __init__(self, road_factory=simple_road_factory, discount=0.99, reward_function=lambda *_, **__ : 0):
+        self._reward_function = reward_function
         self._road_factory = road_factory
         self._discount = discount
         self.reset()
@@ -85,12 +88,15 @@ class DrivingGridworld(object):
             return road.observation(), reward, discount
 
     def fast_play(self, a):
+        s = self.road
         self.road = self.road.sample_transition(a)
+        reward = self._reward_function(s, a, self.road)
         discount = self._discount
         if self.road.has_crashed():
             self.game_over = True
+            reward = reward/(1 - discount)
             discount = 0.0
-        return self.road, 0, discount
+        return self.road, reward, discount
 
     def observation_to_key(self, o):
         ascii_board_rows = [
