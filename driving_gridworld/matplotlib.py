@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_frame(img, fig=None, ax=None, animated=False, show_grid=False):
