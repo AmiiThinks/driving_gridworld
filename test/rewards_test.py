@@ -40,6 +40,11 @@ def determinstic_reward_function():
         *sample_reward_parameters(headlight_range() + 1))
 
 
+def unshifted_determinstic_reward_function():
+    return DeterministicReward.unshifted(
+        *sample_reward_parameters(headlight_range() + 1))
+
+
 @pytest.mark.parametrize("new_reward_function",
                          [determinstic_reward_function, StochasticReward])
 def test_collision_is_worse_than_no_collision(new_reward_function):
@@ -138,3 +143,11 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
 
     assert patient(s, action, sp) == patient.reward_for_critical_error
     assert patient(sp, action, sp) == patient.reward_for_critical_error
+
+
+@pytest.mark.parametrize("new_reward_function",
+                         [unshifted_determinstic_reward_function, StochasticReward.unshifted])
+def test_unshifted_reward_function(new_reward_function):
+    np.random.seed(42)
+    patient = new_reward_function()
+    assert patient.b == 0.0
