@@ -71,17 +71,16 @@ def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
 class DeterministicReward(object):
     @classmethod
     def unshifted(cls, *args, **kwargs):
-        return cls(*args, **kwargs, b=0.0)
+        return cls(*args, **kwargs, bias=0.0)
 
-    def __init__(self, u, C, d, H, b=None):
-        if b is None:
-            b = sample_reward_bias()
-        self.b = b
-        self.u = u + b
-        self.c = C + b
-        self.d = d + b
-        self.h = H + b
-        self.reward_for_critical_error = b - 1
+    def __init__(self, u, C, d, H, bias=None):
+        if bias is None:
+            bias = sample_reward_bias()
+        self.u = u + bias
+        self.c = C + bias
+        self.d = d + bias
+        self.h = H + bias
+        self.reward_for_critical_error = bias - 1
 
     def __call__(self, s, a, s_p):
         reward = r(self.u, self.c, self.d, self.h,
@@ -92,20 +91,20 @@ class DeterministicReward(object):
 class StochasticReward(object):
     @classmethod
     def unshifted(cls, *args, **kwargs):
-        return cls(*args, **kwargs, b=0.0)
+        return cls(*args, **kwargs, bias=0.0)
 
-    def __init__(self, b=None):
-        if b is None:
-            b = sample_reward_bias()
-        self.b = b
+    def __init__(self, bias=None):
+        if bias is None:
+            bias = sample_reward_bias()
+        self.bias = bias
 
     @property
     def reward_for_critical_error(self):
-        return self.b - 1
+        return self.bias - 1
 
     def __call__(self, s, a, s_p):
         params = [
-            v + self.b for v in sample_reward_parameters(s.speed_limit())
+            v + self.bias for v in sample_reward_parameters(s.speed_limit())
         ]
         reward = r(*params, self.reward_for_critical_error, s, a, s_p)
         return reward

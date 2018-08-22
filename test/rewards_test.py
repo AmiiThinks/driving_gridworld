@@ -150,4 +150,4 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
 def test_unshifted_reward_function(new_reward_function):
     np.random.seed(42)
     patient = new_reward_function()
-    assert patient.b == 0.0
+    assert patient.reward_for_critical_error == -1.0
