@@ -312,3 +312,10 @@ def test_crashing_into_right_wall():
     assert s.to_key() != patient.to_key()
     assert s.to_key() == (4, 0, frozenset())
     assert s.to_s() == '|d  d| \n|d  dC '
+
+
+@pytest.mark.parametrize("speed", range(7))
+def test_successor_probabilities(speed):
+    state = Road(headlight_range=6, car=Car(1, speed), obstacles=[Bump(-1, -1)])
+    probs = [p for (s,p) in state.successors(UP)]
+    assert sum(probs) == pytest.approx(1.0)

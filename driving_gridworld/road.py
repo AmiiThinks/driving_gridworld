@@ -158,7 +158,7 @@ class Road(object):
                 if obs_is_revealed:
                     next_obstacle = obs.copy_at_position(*revealed[i])
                     prob_not_appearing_closer = ((1.0 - p)**(
-                        next_obstacle.row - distance + 1))
+                        distance - next_obstacle.row - 1))
                     prob_appearing_in_row = p * prob_not_appearing_closer
                     prob *= prob_appearing_in_row / float(self._num_lanes)
                 else:
