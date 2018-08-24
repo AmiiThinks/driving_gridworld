@@ -160,7 +160,7 @@ class Road(object):
                     prob_not_appearing_closer = ((1.0 - p)**(
                         distance - next_obstacle.row - 1))
                     prob_appearing_in_row = p * prob_not_appearing_closer
-                    prob *= prob_appearing_in_row / float(self._num_lanes)
+                    prob *= prob_appearing_in_row / float(len(self._allowed_obstacle_appearance_columns[i]))
                 else:
                     next_obstacle = obs.next(distance)
                     prob *= (1.0 - p)**distance
