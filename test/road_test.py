@@ -3,7 +3,8 @@ from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
-from driving_gridworld.actions import ACTIONS, RIGHT, LEFT, UP, DOWN
+from driving_gridworld.actions import ACTIONS, RIGHT, LEFT, UP, DOWN, NO_OP
+from driving_gridworld.road import product_combination_pairs
 import pytest
 
 
@@ -319,3 +320,18 @@ def test_successor_probabilities(speed):
     state = Road(headlight_range=6, car=Car(1, speed), obstacles=[Bump(-1, -1)])
     probs = [p for (s,p) in state.successors(UP)]
     assert sum(probs) == pytest.approx(1.0)
+
+
+def test_probabilities_error():
+    state = Road(headlight_range=3, car=Car(1, 1), obstacles=[Bump(-1, -1), Bump(-1, -1)])
+    probs = [p for (s,p) in state.successors(NO_OP)]
+    assert sum(probs) == pytest.approx(1.0)
+
+
+def test_permutations():
+    patient = product_combination_pairs(
+        [(0, i) for i in range(4)],
+        [0, 1],
+        2
+    )
+    assert len(list(patient)) == 16

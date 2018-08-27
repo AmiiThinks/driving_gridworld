@@ -7,8 +7,8 @@ def _byte(c, encoding='ascii'):
     return bytes(c, encoding)[0]
 
 
-def permutation_combination_pairs(a, b, n):
-    return product(permutations(a, n), combinations(b, n))
+def product_combination_pairs(a, b, n):
+    return product(product(a, repeat=n), combinations(b, n))
 
 
 class Road(object):
@@ -122,7 +122,7 @@ class Road(object):
 
         for num_newly_visible_obstacles in range(len(hidden_obstacle_indices) + 1):  # yapf:disable
             for positions, group in (
-                permutation_combination_pairs(
+                product_combination_pairs(
                     self.available_spaces(distance),
                     hidden_obstacle_indices,
                     num_newly_visible_obstacles
