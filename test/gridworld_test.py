@@ -102,10 +102,10 @@ def test_obstacles_always_appear_with_the_same_probability():
 
     all_x = [
         (frozenset(), 0.99),
-        (frozenset([('p', 0, 1, 0)]), 0.0025),
-        (frozenset([('p', 0, 3, 0)]), 0.0025),
-        (frozenset([('p', 0, 0, 0)]), 0.0025),
-        (frozenset([('p', 0, 2, 0)]), 0.0025)
+        (frozenset([('p', 0, 1, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 3, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 0, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 2, 0, 0)]), 0.0025)
     ]  # yapf:disable
     all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))
@@ -124,10 +124,10 @@ def test_obstacles_always_appear_with_the_same_probability():
 
     all_x = [
         (frozenset(), 0.99),
-        (frozenset([('p', 0, 1, 0)]), 0.0025),
-        (frozenset([('p', 0, 3, 0)]), 0.0025),
-        (frozenset([('p', 0, 0, 0)]), 0.0025),
-        (frozenset([('p', 0, 2, 0)]), 0.0025)
+        (frozenset([('p', 0, 1, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 3, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 0, 0, 0)]), 0.0025),
+        (frozenset([('p', 0, 2, 0, 0)]), 0.0025)
     ]  # yapf:disable
     all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))

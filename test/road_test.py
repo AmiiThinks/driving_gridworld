@@ -256,7 +256,7 @@ def test_to_key():
     headlight_range = 1
     car = Car(2, 1)
     patient = Road(headlight_range, car, bumps).to_key()
-    assert patient == (2, 1, frozenset([('b', 0, 2, 0)]))
+    assert patient == (2, 1, frozenset([('b', 0, 2, 0, 0)]))
 
     obstacles = [
         Bump(-1, 0),
@@ -272,7 +272,7 @@ def test_to_key():
     assert patient == (
         2,
         1,
-        frozenset([('b', 0, 2, 0), ('p', 1, 1, 0), ('p', 1, 2, 0)]))  # yapf:disable
+        frozenset([('b', 0, 2, 0, 0), ('p', 1, 1, 0, 0), ('p', 1, 2, 0, 0)]))  # yapf:disable
 
 
 def test_to_s():
@@ -335,3 +335,14 @@ def test_permutations():
         2
     )
     assert len(list(patient)) == 16
+
+
+def test_successor_function_with_identical_states():
+    expected_probs = [0.64, 0.08, 0.08, 0.08, 0.08, 0.0025, 0.005, 0.005, 0.005,
+        0.0025, 0.005, 0.005, 0.0025, 0.005, 0.0025]
+    state = Road(headlight_range = 3, car=Car(1, 1), obstacles=[Bump(-1, -1), Bump(-1, -1)])
+    probs = [p for (s,p) in state.successors(NO_OP)]
+    assert sum(probs) == pytest.approx(1.0)
+    assert len(probs) == len(expected_probs)
+    for i in range(len(probs)):
+        assert probs[i] == pytest.approx(expected_probs[i])

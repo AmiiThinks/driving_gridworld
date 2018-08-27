@@ -1,6 +1,7 @@
 from itertools import product, permutations, combinations
 import numpy as np
 from pycolab.rendering import Observation
+from collections import defaultdict
 
 
 def _byte(c, encoding='ascii'):
@@ -9,6 +10,12 @@ def _byte(c, encoding='ascii'):
 
 def product_combination_pairs(a, b, n):
     return product(product(a, repeat=n), combinations(b, n))
+
+
+class Successor(object):
+    def __init__(self, state=None, prob=0.0):
+        self.state = state
+        self.prob = prob
 
 
 class Road(object):
@@ -140,6 +147,14 @@ class Road(object):
             float: The probability of transitioning to the given successor
                    state.
         '''
+        d = defaultdict(Successor)
+        for s, p in self._successors(action):
+            d[s.to_key()].prob += p
+            d[s.to_key()].state = s
+        for v in d.values():
+            yield v.state, v.prob
+
+    def _successors(self, action):
         distance = self._car.progress_toward_destination(action)
         next_car = self._car.next(action, self.speed_limit())
         if self.has_crashed(next_car):
@@ -184,9 +199,13 @@ class Road(object):
 
     def to_key(self):
         obstacles = []
+        dup_count = defaultdict(lambda: 0)
         for o in self._obstacles:
             if self.obstacle_is_visible(o):
-                obstacles.append((str(o), o.row, o.col, o.speed))
+                k = (str(o), o.row, o.col, o.speed)
+                k_prime = k + (dup_count[k],)
+                dup_count[k] += 1
+                obstacles.append(k_prime)
         return (self._car.col, self._car.speed, frozenset(obstacles))
 
     def to_s(self):
