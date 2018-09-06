@@ -45,6 +45,16 @@ def unshifted_determinstic_reward_function(reward_for_critical_error=-1.0):
         *sample_reward_parameters(headlight_range() + 1), reward_for_critical_error=reward_for_critical_error)
 
 
+def sample_determinstic_reward_function(reward_for_critical_error=-1.0):
+    return DeterministicReward.sample(headlight_range() + 1,
+        reward_for_critical_error=reward_for_critical_error)
+
+
+def sample_unshifted_determinstic_reward_function(reward_for_critical_error=-1.0):
+    return DeterministicReward.sample_unshifted(headlight_range() + 1,
+        reward_for_critical_error=reward_for_critical_error)
+
+
 @pytest.mark.parametrize("new_reward_function",
                          [determinstic_reward_function, StochasticReward])
 def test_collision_is_worse_than_no_collision(new_reward_function):
@@ -160,3 +170,13 @@ def test_unshifted_reward_fuction_with_variable_reward_for_critical_error(new_re
     np.random.seed(42)
     patient = new_reward_function(reward_for_critical_error=critical_reward)
     assert patient.reward_for_critical_error == critical_reward
+
+
+@pytest.mark.parametrize("critical_reward", [float(i) for i in range(-1, -11, -1)])
+def test_sampled_unshifted_reward_fuction(critical_reward):
+    np.random.seed(42)
+    patient = sample_unshifted_determinstic_reward_function(
+    reward_for_critical_error=critical_reward
+    )
+    bias = patient.reward_for_critical_error - critical_reward
+    assert bias == 0.0
