@@ -42,16 +42,20 @@ def determinstic_reward_function():
 
 def unshifted_determinstic_reward_function(reward_for_critical_error=-1.0):
     return DeterministicReward.unshifted(
-        *sample_reward_parameters(headlight_range() + 1), reward_for_critical_error=reward_for_critical_error)
-
-
-def sample_determinstic_reward_function(reward_for_critical_error=-1.0):
-    return DeterministicReward.sample(headlight_range() + 1,
+        *sample_reward_parameters(headlight_range() + 1),
         reward_for_critical_error=reward_for_critical_error)
 
 
-def sample_unshifted_determinstic_reward_function(reward_for_critical_error=-1.0):
-    return DeterministicReward.sample_unshifted(headlight_range() + 1,
+def sample_determinstic_reward_function(reward_for_critical_error=-1.0):
+    return DeterministicReward.sample(
+        headlight_range() + 1,
+        reward_for_critical_error=reward_for_critical_error)
+
+
+def sample_unshifted_determinstic_reward_function(
+        reward_for_critical_error=-1.0):
+    return DeterministicReward.sample_unshifted(
+        headlight_range() + 1,
         reward_for_critical_error=reward_for_critical_error)
 
 
@@ -155,28 +159,32 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
     assert patient(sp, action, sp) == patient.reward_for_critical_error
 
 
-@pytest.mark.parametrize("new_reward_function",
-                         [unshifted_determinstic_reward_function, StochasticReward.unshifted])
+@pytest.mark.parametrize(
+    "new_reward_function",
+    [unshifted_determinstic_reward_function, StochasticReward.unshifted])
 def test_unshifted_reward_function(new_reward_function):
     np.random.seed(42)
     patient = new_reward_function()
     assert patient.reward_for_critical_error == -1.0
 
 
-@pytest.mark.parametrize("new_reward_function",
-                         [unshifted_determinstic_reward_function, StochasticReward.unshifted])
-@pytest.mark.parametrize("critical_reward", [float(i) for i in range(-1, -11, -1)])
-def test_unshifted_reward_fuction_with_variable_reward_for_critical_error(new_reward_function, critical_reward):
+@pytest.mark.parametrize(
+    "new_reward_function",
+    [unshifted_determinstic_reward_function, StochasticReward.unshifted])
+@pytest.mark.parametrize("critical_reward",
+                         [float(i) for i in range(-1, -11, -1)])
+def test_unshifted_reward_fuction_with_variable_reward_for_critical_error(
+        new_reward_function, critical_reward):
     np.random.seed(42)
     patient = new_reward_function(reward_for_critical_error=critical_reward)
     assert patient.reward_for_critical_error == critical_reward
 
 
-@pytest.mark.parametrize("critical_reward", [float(i) for i in range(-1, -11, -1)])
+@pytest.mark.parametrize("critical_reward",
+                         [float(i) for i in range(-1, -11, -1)])
 def test_sampled_unshifted_reward_fuction(critical_reward):
     np.random.seed(42)
     patient = sample_unshifted_determinstic_reward_function(
-    reward_for_critical_error=critical_reward
-    )
+        reward_for_critical_error=critical_reward)
     bias = patient.reward_for_critical_error - critical_reward
     assert bias == 0.0
