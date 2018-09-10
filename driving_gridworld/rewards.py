@@ -43,7 +43,7 @@ def sample_reward_parameters(speed_limit, epsilon=10**-6):
     return u_vec, C, d_vec, H
 
 
-def sample_min_reward_parameters(speed_limit, epsilon=10**-6):
+def sample_min_reward_parameters(speed_limit, epsilon=1e-6):
     lb, ub = specify_bounds()
     mp = (lb + ub) / 2
     u_vec = np.array([mp] * (speed_limit + 1))
