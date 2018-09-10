@@ -53,7 +53,14 @@ def sample_determinstic_reward_function(reward_for_critical_error=-1.0):
 
 
 def sample_unshifted_determinstic_reward_function(
-        reward_for_critical_error=-1.0):
+    reward_for_critical_error=-1.0):
+    return DeterministicReward.sample_unshifted(
+        headlight_range() + 1,
+        reward_for_critical_error=reward_for_critical_error)
+
+
+def sample_unshifted_minimum_determinstic_reward_function(
+    reward_for_critical_error=-1.0):
     return DeterministicReward.sample_unshifted(
         headlight_range() + 1,
         reward_for_critical_error=reward_for_critical_error)
@@ -188,3 +195,61 @@ def test_sampled_unshifted_reward_fuction(critical_reward):
         reward_for_critical_error=critical_reward)
     bias = patient.reward_for_critical_error - critical_reward
     assert bias == 0.0
+
+
+@pytest.mark.parametrize("columns", [(0, -1), (3, 4)])
+@pytest.mark.parametrize("action", ACTIONS)
+@pytest.mark.parametrize("critical_reward",
+                         [float(i) for i in range(-1, -11, -1)])
+def test_min_reward_function(columns, action, critical_reward):
+    np.random.seed(42)
+    patient = sample_unshifted_minimum_determinstic_reward_function(
+    reward_for_critical_error=critical_reward)
+    bias = patient.reward_for_critical_error - critical_reward
+    assert bias == 0.0
+
+    s = new_road(car_col=columns[0])
+    sp = new_road(car_col=columns[1])
+
+    assert not s.has_crashed()
+    assert sp.has_crashed()
+
+    assert patient(s, action, sp) == patient.reward_for_critical_error
+    assert patient(sp, action, sp) == patient.reward_for_critical_error
+
+
+def checkEqual(iterator):
+    iterator = iter(iterator)
+    try:
+        first = next(iterator)
+    except StopIteration:
+        return True
+    return all(first == rest for rest in iterator)
+
+
+def test_sample_min_reward_parameters():
+    patient = sample_unshifted_minimum_determinstic_reward_function()
+    u = patient.u
+    C = patient.c
+    d = patient.d
+    H = patient.h
+
+    assert len(u) == headlight_range() + 2 == len(d)
+    assert C.shape == (headlight_range() + 2, headlight_range() + 1) == H.shape
+
+    rows = range(0, headlight_range() + 2)
+    columns = range(0, headlight_range() + 1)
+    for i, j in product(rows, columns):
+        assert u[i] > d[i] > H[i, j]
+        assert u[i] > C[i, j] > H[i, j]
+        if j > 0:
+            assert C[i, j - 1] > C[i, j]
+            assert H[i, j - 1] > H[i, j]
+
+    for i in rows:
+        checkEqual(np.diag(C, k=-i))
+        checkEqual(np.diag(H, k=-i))
+
+    for j in columns:
+        checkEqual(np.diag(C, k=j))
+        checkEqual(np.diag(H, k=j))
