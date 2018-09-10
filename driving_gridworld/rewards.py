@@ -165,52 +165,28 @@ class StochasticReward(object):
         return reward
 
 
-def group_reward_parameters_for_multiple_seeds(speed_limit):
-    U = np.zeros(speed_limit + 1)
-    D = np.zeros(speed_limit + 1)
-    H = np.zeros(speed_limit + 1)
-    C = np.zeros(hspeed_limit + 1)
+def sample_multiple_reward_parameters(speed_limit, num_samples=100):
+    U = []
+    D = []
+    H = []
+    C = []
 
-    initial_seed = 0
-    end = 100
-    step = 1
-    num_samples = int((end - initial_seed) / step)
-
-    for seed in range(initial_seed, end, step):
-        np.random.seed(seed)
+    for _ in range(num_samples):
         u, c, d, h = sample_reward_parameters(speed_limit)
-        #reward_function = StochasticReward.unshifted(reward_for_critical_error=-10.0)
-        U = np.c_[U, u]
-        D = np.c_[D, d]
-        H = np.c_[H, h]
-        C = np.c_[C, c]
+        U.append(u)
+        D.append(d)
+        H.append(h)
+        C.append(c)
 
-    U = U[:, 1:]
-    C = C[:, 1:]
-    D = D[:, 1:]
-    H = H[:, 1:]
+    U = np.array(U).T
+    C = np.array(C).transpose([1, 2, 0])
+    D = np.array(D).T
+    H = np.array(H).transpose([1, 2, 0])
 
-    return U, C, D, H, num_samples
+    return U, C, D, H
 
 
-def average_reward_parameters(speed_limit):
-    U, C, D, H, num_samples = group_reward_parameters_for_multiple_seeds(
-        speed_limit)
-    u_exp = U.mean(axis=1)
-    d_exp = D.mean(axis=1)
-
-    assert len(H[0]) == len(C[0])
-    numcols = len(H[0])
-    assert numcols == num_samples * (speed_limit)
-    H_exp = np.zeros((speed_limit + 1, speed_limit))
-    C_exp = np.zeros((speed_limit + 1, speed_limit))
-
-    for i in range(0, speed_limit + 1):
-        for initial_col in range(0, speed_limit):
-            h = np.array(H[i, initial_col:numcols:speed_limit])
-            H_exp[i, initial_col] = h.mean()
-            c = np.array(C[i, initial_col:numcols:speed_limit])
-            C_exp[i, initial_col] = c.mean()
-    assert H_exp.shape == C_exp.shape
-
-    return u_exp, d_exp, C_exp, H_exp
+def average_reward_parameters(speed_limit, num_samples=100):
+    return (
+        v.mean(axis=-1)
+        for v in sample_multiple_reward_parameters(speed_limit, num_samples))
