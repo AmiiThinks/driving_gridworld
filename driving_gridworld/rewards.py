@@ -22,7 +22,7 @@ def sample_reward_parameters(speed_limit, epsilon=1e-10):
         u_vec[0],
         size=(len(u_vec), speed_limit))
     H = np.random.uniform(
-        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - epsilon,
         min(C[0, 0], d_vec[0]),
         size=(len(u_vec), speed_limit))
 
@@ -36,15 +36,14 @@ def sample_reward_parameters(speed_limit, epsilon=1e-10):
             MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + epsilon,
             min(C[i - 1, 0], u_vec[i]))
         C[i, 0] = np.random.uniform(Cmin, u_vec[i])
-        Hmin = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + epsilon,
-            min(C[i, 0], H[i - 1, 0], d_vec[i]))
+        Hmin = np.random.uniform(MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+                                 min(C[i, 0], H[i - 1, 0], d_vec[i]))
         H[i, 0] = np.random.uniform(Hmin, min(C[i, 0], d_vec[i]))
     for j in range(1, speed_limit):
         C[0, j] = np.random.uniform(
             MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - epsilon, C[0, j - 1])
         H[0, j] = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - epsilon,
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - 2 * epsilon,
             min(C[0, j], H[0, j - 1]))
     for i, j in product(range(1, len(u_vec)), range(1, speed_limit)):
         Cmin = np.random.uniform(
@@ -52,8 +51,9 @@ def sample_reward_parameters(speed_limit, epsilon=1e-10):
             min(C[i - 1, j], C[i, j - 1]))
         C[i, j] = np.random.uniform(Cmin, C[i, j - 1])
         Hmin = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + ((i - j) * epsilon),
-            min(C[i, j], H[i - 1, j], H[i, j - 1]))
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + (
+                (i - (j + 1)) * epsilon), min(C[i, j], H[i - 1, j],
+                                              H[i, j - 1]))
         H[i, j] = np.random.uniform(Hmin, min(C[i, j], H[i, j - 1]))
     return u_vec, C, d_vec, H
 
@@ -63,7 +63,8 @@ def worst_case_reward_parameters(speed_limit, epsilon=1e-10):
           MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2.0
     u_vec = np.full([speed_limit + 1], mp)
     d_vec = np.full(u_vec.shape, MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
-    C = np.full([speed_limit + 1, speed_limit], MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
+    C = np.full([speed_limit + 1, speed_limit],
+                MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
     H = C.copy() - epsilon
     for i in range(1, speed_limit + 1):
         u_vec[i] = u_vec[i - 1] + epsilon
