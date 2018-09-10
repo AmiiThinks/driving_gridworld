@@ -7,49 +7,64 @@ def sample_reward_bias():
     return np.random.uniform(-1, 1)
 
 
-def specify_bounds():
-    upper_bound = 1.0
-    lower_bound_for_no_progress = -1.0
-    return lower_bound_for_no_progress, upper_bound
+MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS = -1.0
+MAX_REWARD_UNOBSTRUCTED_PROGRESS = 1.0
 
 
-def sample_reward_parameters(speed_limit, epsilon=10**-6):
-    lb, ub = specify_bounds()
-    mp = (lb + ub) / 2
+def sample_reward_parameters(speed_limit, epsilon=1e-10):
+    mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
+          MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2
     u_vec = np.zeros(speed_limit + 1)
-    d_vec = np.random.uniform(lb, mp, size=speed_limit + 1)
-    C = np.random.uniform(lb, u_vec[0], size=(speed_limit + 1, speed_limit))
+    d_vec = np.random.uniform(
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS, mp, size=len(u_vec))
+    C = np.random.uniform(
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+        u_vec[0],
+        size=(len(u_vec), speed_limit))
     H = np.random.uniform(
-        lb, min(C[0, 0], d_vec[0]), size=(speed_limit + 1, speed_limit))
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+        min(C[0, 0], d_vec[0]),
+        size=(len(u_vec), speed_limit))
 
-    for i in range(1, speed_limit + 1):
-        ui = np.random.uniform(u_vec[i - 1], ub)
-        u_vec[i] = ui + epsilon
-        di_min = np.random.uniform(lb, d_vec[i - 1])
-        di = np.random.uniform(di_min, u_vec[i])
-        d_vec[i] = di + epsilon
-        Cmin = np.random.uniform(lb, min(C[i - 1, 0], u_vec[i]))
-        C[i, 0] = np.random.uniform(Cmin, u_vec[i]) + epsilon
-        Hmin = np.random.uniform(lb, min(C[i, 0], H[i - 1, 0], d_vec[i]))
-        H[i, 0] = np.random.uniform(Hmin, min(C[i, 0], d_vec[i])) + epsilon
+    for i in range(1, len(u_vec)):
+        u_vec[i] = np.random.uniform(u_vec[i - 1] + epsilon,
+                                     MAX_REWARD_UNOBSTRUCTED_PROGRESS)
+        di_min = np.random.uniform(MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+                                   d_vec[i - 1])
+        d_vec[i] = np.random.uniform(di_min + epsilon, u_vec[i])
+        Cmin = np.random.uniform(
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + epsilon,
+            min(C[i - 1, 0], u_vec[i]))
+        C[i, 0] = np.random.uniform(Cmin, u_vec[i])
+        Hmin = np.random.uniform(
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + epsilon,
+            min(C[i, 0], H[i - 1, 0], d_vec[i]))
+        H[i, 0] = np.random.uniform(Hmin, min(C[i, 0], d_vec[i]))
     for j in range(1, speed_limit):
-        C[0, j] = np.random.uniform(lb, C[0, j - 1]) - epsilon
-        H[0, j] = np.random.uniform(lb, min(C[0, j], H[0, j - 1])) - epsilon
-    for i, j in product(range(1, speed_limit + 1), range(1, speed_limit)):
-        Cmin = np.random.uniform(lb, min(C[i - 1, j], C[i, j - 1]))
-        C[i, j] = np.random.uniform(Cmin, C[i, j - 1]) + ((i-j) * epsilon)
-        Hmin = np.random.uniform(lb, min(C[i, j], H[i - 1, j], H[i, j - 1]))
-        H[i, j] = np.random.uniform(Hmin, min(C[i, j], H[i, j - 1])) + ((i-j) * epsilon)
+        C[0, j] = np.random.uniform(
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - epsilon, C[0, j - 1])
+        H[0, j] = np.random.uniform(
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - epsilon,
+            min(C[0, j], H[0, j - 1]))
+    for i, j in product(range(1, len(u_vec)), range(1, speed_limit)):
+        Cmin = np.random.uniform(
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + ((i - j) * epsilon),
+            min(C[i - 1, j], C[i, j - 1]))
+        C[i, j] = np.random.uniform(Cmin, C[i, j - 1])
+        Hmin = np.random.uniform(
+            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + ((i - j) * epsilon),
+            min(C[i, j], H[i - 1, j], H[i, j - 1]))
+        H[i, j] = np.random.uniform(Hmin, min(C[i, j], H[i, j - 1]))
     return u_vec, C, d_vec, H
 
 
-def sample_min_reward_parameters(speed_limit, epsilon=1e-6):
-    lb, ub = specify_bounds()
-    mp = (lb + ub) / 2
-    u_vec = np.array([mp] * (speed_limit + 1))
-    d_vec = np.array([lb] * (speed_limit + 1))
-    C = np.array([[lb] * speed_limit] * (speed_limit + 1))
-    H = np.array([[lb] * speed_limit] * (speed_limit + 1))
+def worst_case_reward_parameters(speed_limit, epsilon=1e-10):
+    mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
+          MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2.0
+    u_vec = np.full([speed_limit + 1], mp)
+    d_vec = np.full(u_vec.shape, MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
+    C = np.full([speed_limit + 1, speed_limit], MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
+    H = C.copy() - epsilon
     for i in range(1, speed_limit + 1):
         u_vec[i] = u_vec[i - 1] + epsilon
         d_vec[i] = d_vec[i - 1] + epsilon
@@ -59,8 +74,8 @@ def sample_min_reward_parameters(speed_limit, epsilon=1e-6):
         C[0, j] = C[0, j - 1] - epsilon
         H[0, j] = H[0, j - 1] - epsilon
     for i, j in product(range(1, speed_limit + 1), range(1, speed_limit)):
-        C[i, j] = lb + ((i-j) * epsilon)
-        H[i, j] = lb + ((i-j) * epsilon)
+        C[i, j] += (i - j) * epsilon
+        H[i, j] += (i - j) * epsilon
     return u_vec, C, d_vec, H
 
 
@@ -111,9 +126,9 @@ class DeterministicReward(object):
         return cls(*sample_reward_parameters(speed_limit), **kwargs, bias=0.0)
 
     @classmethod
-    def sample_min_reward_unshifted(cls, speed_limit, **kwargs):
-        return cls(*sample_min_reward_parameters(speed_limit), **kwargs,
-            bias=0.0)
+    def worst_case_reward_unshifted(cls, speed_limit, **kwargs):
+        return cls(
+            *worst_case_reward_parameters(speed_limit), **kwargs, bias=0.0)
 
     def __init__(self, u, C, d, H, bias=None, reward_for_critical_error=-1):
         if bias is None:
@@ -158,12 +173,12 @@ def group_reward_parameters_for_multiple_seeds(speed_limit):
     initial_seed = 0
     end = 100
     step = 1
-    num_samples = int((end - initial_seed)/step)
+    num_samples = int((end - initial_seed) / step)
 
     for seed in range(initial_seed, end, step):
         np.random.seed(seed)
         u, c, d, h = sample_reward_parameters(speed_limit)
-          #reward_function = StochasticReward.unshifted(reward_for_critical_error=-10.0)
+        #reward_function = StochasticReward.unshifted(reward_for_critical_error=-10.0)
         U = np.c_[U, u]
         D = np.c_[D, d]
         H = np.c_[H, h]
@@ -178,7 +193,8 @@ def group_reward_parameters_for_multiple_seeds(speed_limit):
 
 
 def average_reward_parameters(speed_limit):
-    U, C, D, H, num_samples = group_reward_parameters_for_multiple_seeds(speed_limit)
+    U, C, D, H, num_samples = group_reward_parameters_for_multiple_seeds(
+        speed_limit)
     u_exp = U.mean(axis=1)
     d_exp = D.mean(axis=1)
 
@@ -190,10 +206,10 @@ def average_reward_parameters(speed_limit):
 
     for i in range(0, speed_limit + 1):
         for initial_col in range(0, speed_limit):
-          h = np.array(H[i, initial_col : numcols : speed_limit])
-          H_exp[i, initial_col] = h.mean()
-          c = np.array(C[i, initial_col : numcols : speed_limit])
-          C_exp[i, initial_col] = c.mean()
+            h = np.array(H[i, initial_col:numcols:speed_limit])
+            H_exp[i, initial_col] = h.mean()
+            c = np.array(C[i, initial_col:numcols:speed_limit])
+            C_exp[i, initial_col] = c.mean()
     assert H_exp.shape == C_exp.shape
 
     return u_exp, d_exp, C_exp, H_exp

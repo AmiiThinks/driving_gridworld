@@ -59,9 +59,9 @@ def sample_unshifted_determinstic_reward_function(
         reward_for_critical_error=reward_for_critical_error)
 
 
-def sample_unshifted_minimum_determinstic_reward_function(
+def unshifted_worst_case_determinstic_reward_function(
     reward_for_critical_error=-1.0):
-    return DeterministicReward.sample_unshifted(
+    return DeterministicReward.worst_case_reward_unshifted(
         headlight_range() + 1,
         reward_for_critical_error=reward_for_critical_error)
 
@@ -203,7 +203,7 @@ def test_sampled_unshifted_reward_fuction(critical_reward):
                          [float(i) for i in range(-1, -11, -1)])
 def test_min_reward_function(columns, action, critical_reward):
     np.random.seed(42)
-    patient = sample_unshifted_minimum_determinstic_reward_function(
+    patient = unshifted_worst_case_determinstic_reward_function(
     reward_for_critical_error=critical_reward)
     bias = patient.reward_for_critical_error - critical_reward
     assert bias == 0.0
@@ -218,8 +218,8 @@ def test_min_reward_function(columns, action, critical_reward):
     assert patient(sp, action, sp) == patient.reward_for_critical_error
 
 
-def checkEqual(iterator):
-    iterator = iter(iterator)
+def check_equal(array):
+    iterator = iter(array)
     try:
         first = next(iterator)
     except StopIteration:
@@ -227,13 +227,12 @@ def checkEqual(iterator):
     return all(first == rest for rest in iterator)
 
 
-def test_sample_min_reward_parameters():
-    patient = sample_unshifted_minimum_determinstic_reward_function()
+def test_worst_case_reward_parameters():
+    patient = unshifted_worst_case_determinstic_reward_function()
     u = patient.u
     C = patient.c
     d = patient.d
     H = patient.h
-
     assert len(u) == headlight_range() + 2 == len(d)
     assert C.shape == (headlight_range() + 2, headlight_range() + 1) == H.shape
 
@@ -247,9 +246,9 @@ def test_sample_min_reward_parameters():
             assert H[i, j - 1] > H[i, j]
 
     for i in rows:
-        checkEqual(np.diag(C, k=-i))
-        checkEqual(np.diag(H, k=-i))
+        check_equal(np.diag(C, k=-i))
+        check_equal(np.diag(H, k=-i))
 
     for j in columns:
-        checkEqual(np.diag(C, k=j))
-        checkEqual(np.diag(H, k=j))
+        check_equal(np.diag(C, k=j))
+        check_equal(np.diag(H, k=j))
