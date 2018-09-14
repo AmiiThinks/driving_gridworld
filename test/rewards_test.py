@@ -66,6 +66,13 @@ def unshifted_worst_case_determinstic_reward_function(
         reward_for_critical_error=reward_for_critical_error)
 
 
+def unshifted_best_case_determinstic_reward_function(
+    reward_for_critical_error=-1.0):
+    return DeterministicReward.best_case_reward_unshifted(
+        headlight_range() + 1,
+        reward_for_critical_error=reward_for_critical_error)
+
+
 @pytest.mark.parametrize("new_reward_function",
                          [determinstic_reward_function, StochasticReward])
 def test_collision_is_worse_than_no_collision(new_reward_function):
@@ -227,8 +234,10 @@ def check_equal(array):
     return all(first == rest for rest in iterator)
 
 
-def test_worst_case_reward_parameters():
-    patient = unshifted_worst_case_determinstic_reward_function()
+@pytest.mark.parametrize("new_reward_function",
+    [unshifted_worst_case_determinstic_reward_function, unshifted_best_case_determinstic_reward_function])
+def test_best_and_worst_case_reward_parameters(new_reward_function):
+    patient = new_reward_function()
     u = patient.u
     C = patient.c
     d = patient.d
