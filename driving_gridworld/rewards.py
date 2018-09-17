@@ -60,8 +60,6 @@ def sample_reward_parameters(speed_limit, epsilon=default_epsilon):
 
 
 def worst_case_reward_parameters(speed_limit, epsilon=default_epsilon):
-    mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
-          MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2.0
     u_vec = np.full([speed_limit + 1], mp)
     d_vec = np.full(u_vec.shape, MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
     C = np.full([speed_limit + 1, speed_limit],
@@ -82,8 +80,6 @@ def worst_case_reward_parameters(speed_limit, epsilon=default_epsilon):
 
 
 def best_case_reward_parameters(speed_limit, epsilon=default_epsilon):
-    mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
-          MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2.0
     u_vec = np.full([speed_limit + 1], mp)
     d_vec = np.full(u_vec.shape, u_vec[0])
     C = np.full([len(u_vec), speed_limit], u_vec[0])
