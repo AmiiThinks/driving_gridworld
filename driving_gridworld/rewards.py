@@ -9,14 +9,15 @@ def sample_reward_bias():
 
 MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS = -1.0
 MAX_REWARD_UNOBSTRUCTED_PROGRESS = 1.0
+mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
+    MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2
+default_epsilon = 1e-10
 
 
-def sample_reward_parameters(speed_limit, epsilon=1e-10):
-    mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
-          MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2
-    u_vec = np.zeros(speed_limit + 1)
+def sample_reward_parameters(speed_limit, epsilon=default_epsilon):
+    u_vec = np.full([speed_limit + 1], mp)
     d_vec = np.random.uniform(
-        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS, mp, size=len(u_vec))
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS, u_vec[0], size=len(u_vec))
     C = np.random.uniform(
         MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
         u_vec[0],
@@ -28,7 +29,7 @@ def sample_reward_parameters(speed_limit, epsilon=1e-10):
 
     for i in range(1, len(u_vec)):
         u_vec[i] = np.random.uniform(u_vec[i - 1] + epsilon,
-                                     MAX_REWARD_UNOBSTRUCTED_PROGRESS)
+                                     MAX_REWARD_UNOBSTRUCTED_PROGRESS + i * epsilon)
         di_min = np.random.uniform(MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
                                    d_vec[i - 1])
         d_vec[i] = np.random.uniform(di_min + epsilon, u_vec[i])
@@ -58,9 +59,7 @@ def sample_reward_parameters(speed_limit, epsilon=1e-10):
     return u_vec, C, d_vec, H
 
 
-def worst_case_reward_parameters(speed_limit, epsilon=1e-10):
-    mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
-          MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2.0
+def worst_case_reward_parameters(speed_limit, epsilon=default_epsilon):
     u_vec = np.full([speed_limit + 1], mp)
     d_vec = np.full(u_vec.shape, MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
     C = np.full([speed_limit + 1, speed_limit],
@@ -71,6 +70,25 @@ def worst_case_reward_parameters(speed_limit, epsilon=1e-10):
         d_vec[i] = d_vec[i - 1] + epsilon
         C[i, 0] = C[i - 1, 0] + epsilon
         H[i, 0] = H[i - 1, 0] + epsilon
+    for j in range(1, speed_limit):
+        C[0, j] = C[0, j - 1] - epsilon
+        H[0, j] = H[0, j - 1] - epsilon
+    for i, j in product(range(1, speed_limit + 1), range(1, speed_limit)):
+        C[i, j] += (i - j) * epsilon
+        H[i, j] += (i - j) * epsilon
+    return u_vec, C, d_vec, H
+
+
+def best_case_reward_parameters(speed_limit, epsilon=default_epsilon):
+    u_vec = np.full([speed_limit + 1], mp)
+    d_vec = np.full(u_vec.shape, u_vec[0])
+    C = np.full([len(u_vec), speed_limit], u_vec[0])
+    H = C.copy() - epsilon
+    for i in range(1, speed_limit + 1):
+        u_vec[i] = MAX_REWARD_UNOBSTRUCTED_PROGRESS + i * epsilon
+        d_vec[i] = u_vec[i] - epsilon
+        C[i, 0] = u_vec[i] - epsilon
+        H[i, 0] = min(C[i, 0] - epsilon, d_vec[i] - epsilon)
     for j in range(1, speed_limit):
         C[0, j] = C[0, j - 1] - epsilon
         H[0, j] = H[0, j - 1] - epsilon
@@ -130,6 +148,11 @@ class DeterministicReward(object):
     def worst_case_reward_unshifted(cls, speed_limit, **kwargs):
         return cls(
             *worst_case_reward_parameters(speed_limit), **kwargs, bias=0.0)
+
+    @classmethod
+    def best_case_reward_unshifted(cls, speed_limit, **kwargs):
+        return cls(
+            *best_case_reward_parameters(speed_limit), **kwargs, bias=0.0)
 
     def __init__(self, u, C, d, H, bias=None, reward_for_critical_error=-1):
         if bias is None:
