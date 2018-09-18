@@ -335,6 +335,11 @@ class DeterministicReward(object):
         return cls(
             *best_case_reward_parameters(speed_limit), **kwargs, bias=0.0)
 
+    @classmethod
+    def average_reward_unshifted(cls, speed_limit, **kwargs):
+        return cls(
+            *average_reward_parameters(speed_limit), **kwargs, bias=0.0)
+
     def __init__(self, u, C, d, H, bias=None, reward_for_critical_error=-1):
         if bias is None:
             bias = sample_reward_bias()

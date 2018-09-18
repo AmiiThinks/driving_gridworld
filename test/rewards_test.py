@@ -77,6 +77,13 @@ def unshifted_best_case_determinstic_reward_function(
         reward_for_critical_error=reward_for_critical_error)
 
 
+def unshifted_average_case_determinstic_reward_function(
+        reward_for_critical_error=-1.0):
+    return DeterministicReward.average_reward_unshifted(
+        headlight_range() + 1,
+        reward_for_critical_error=reward_for_critical_error)
+
+
 @pytest.mark.parametrize("new_reward_function",
                          [determinstic_reward_function, StochasticReward])
 def test_collision_is_worse_than_no_collision(new_reward_function):
@@ -240,9 +247,10 @@ def check_equal(array):
 
 @pytest.mark.parametrize("new_reward_function", [
     unshifted_worst_case_determinstic_reward_function,
-    unshifted_best_case_determinstic_reward_function
+    unshifted_best_case_determinstic_reward_function,
+    unshifted_average_case_determinstic_reward_function
 ])
-def test_best_and_worst_case_reward_parameters(new_reward_function):
+def test_best_worst_and_average_case_reward_parameters(new_reward_function):
     patient = new_reward_function()
     u = patient.u
     C = patient.c
@@ -270,3 +278,12 @@ def test_best_and_worst_case_reward_parameters(new_reward_function):
     for j in columns:
         check_equal(np.diag(C, k=j))
         check_equal(np.diag(H, k=j))
+
+
+# TODO: check why the function is not working correctly
+def test_check_equal():
+    a = np.matrix('1 2 3; 4 5 6; 7 8 9')
+    print(a)
+    for i in range(2):
+        check_equal(np.diag(a, k=-i))
+        check_equal(np.diag(a, k=i))
