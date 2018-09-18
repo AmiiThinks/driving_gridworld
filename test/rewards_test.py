@@ -19,7 +19,9 @@ def new_road(*obstacles, speed=headlight_range(), car_col=1):
     return Road(headlight_range(), Car(car_col, speed=speed), obstacles)
 
 
-def test_sample_reward_parameters():
+@pytest.mark.parametrize("seed", range(100))
+def test_sample_reward_parameters(seed):
+    np.random.seed(seed)
     u, C, d, H = sample_reward_parameters(headlight_range() + 1)
 
     assert len(u) == headlight_range() + 2 == len(d)
@@ -28,8 +30,10 @@ def test_sample_reward_parameters():
     rows = range(0, headlight_range() + 2)
     colums = range(0, headlight_range() + 1)
     for i, j in product(rows, colums):
-        assert u[i] > d[i] > H[i, j]
-        assert u[i] > C[i, j] > H[i, j]
+        assert u[i] > d[i]
+        assert d[i] > H[i, j]
+        assert u[i] > C[i, j]
+        assert C[i, j] > H[i, j]
         if j > 0:
             assert C[i, j - 1] > C[i, j]
             assert H[i, j - 1] > H[i, j]
@@ -53,21 +57,21 @@ def sample_determinstic_reward_function(reward_for_critical_error=-1.0):
 
 
 def sample_unshifted_determinstic_reward_function(
-    reward_for_critical_error=-1.0):
+        reward_for_critical_error=-1.0):
     return DeterministicReward.sample_unshifted(
         headlight_range() + 1,
         reward_for_critical_error=reward_for_critical_error)
 
 
 def unshifted_worst_case_determinstic_reward_function(
-    reward_for_critical_error=-1.0):
+        reward_for_critical_error=-1.0):
     return DeterministicReward.worst_case_reward_unshifted(
         headlight_range() + 1,
         reward_for_critical_error=reward_for_critical_error)
 
 
 def unshifted_best_case_determinstic_reward_function(
-    reward_for_critical_error=-1.0):
+        reward_for_critical_error=-1.0):
     return DeterministicReward.best_case_reward_unshifted(
         headlight_range() + 1,
         reward_for_critical_error=reward_for_critical_error)
@@ -211,7 +215,7 @@ def test_sampled_unshifted_reward_fuction(critical_reward):
 def test_min_reward_function(columns, action, critical_reward):
     np.random.seed(42)
     patient = unshifted_worst_case_determinstic_reward_function(
-    reward_for_critical_error=critical_reward)
+        reward_for_critical_error=critical_reward)
     bias = patient.reward_for_critical_error - critical_reward
     assert bias == 0.0
 
@@ -234,8 +238,10 @@ def check_equal(array):
     return all(first == rest for rest in iterator)
 
 
-@pytest.mark.parametrize("new_reward_function",
-    [unshifted_worst_case_determinstic_reward_function, unshifted_best_case_determinstic_reward_function])
+@pytest.mark.parametrize("new_reward_function", [
+    unshifted_worst_case_determinstic_reward_function,
+    unshifted_best_case_determinstic_reward_function
+])
 def test_best_and_worst_case_reward_parameters(new_reward_function):
     patient = new_reward_function()
     u = patient.u
@@ -247,9 +253,12 @@ def test_best_and_worst_case_reward_parameters(new_reward_function):
 
     rows = range(0, headlight_range() + 2)
     columns = range(0, headlight_range() + 1)
+
     for i, j in product(rows, columns):
-        assert u[i] > d[i] > H[i, j]
-        assert u[i] > C[i, j] > H[i, j]
+        assert u[i] > d[i]
+        assert d[i] > H[i, j]
+        assert u[i] > C[i, j]
+        assert C[i, j] > H[i, j]
         if j > 0:
             assert C[i, j - 1] > C[i, j]
             assert H[i, j - 1] > H[i, j]

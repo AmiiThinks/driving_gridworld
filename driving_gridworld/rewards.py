@@ -2,6 +2,245 @@ import numpy as np
 from itertools import product
 from driving_gridworld.obstacles import Pedestrian
 
+DEFAULT_EPSILON = 1e-10
+
+
+class SituationalReward(object):
+    def __init__(self,
+                 wc_non_critical_error_reward,
+                 stopping_reward,
+                 epsilon=DEFAULT_EPSILON):
+        self.wc_non_critical_error_reward = wc_non_critical_error_reward
+        self.stopping_reward = stopping_reward
+        self.epsilon = epsilon
+
+    def unobstructed_reward(self, progress_made):
+        if progress_made < 1:
+            return self.stopping_reward
+        else:
+            return (
+                self.unobstructed_reward_at_least(
+                    self.unobstructed_reward(progress_made - 1)
+                ) + self.epsilon
+            )  # yapf:disable
+
+    def offroad_reward(self, progress_made):
+        min_r = (
+            self.wc_non_critical_error_reward + progress_made * self.epsilon)
+        if progress_made < 1:
+            return min_r
+        else:
+            return self.offroad_reward_between(
+                min_r,
+                self.unobstructed_reward(progress_made) - self.epsilon,
+                self.offroad_reward(progress_made - 1))
+
+    def pavement_collision_reward(self, progress_made,
+                                  collision_obstacle_speed):
+        if progress_made < 0:
+            return np.inf
+        elif collision_obstacle_speed < 0:
+            return self.unobstructed_reward(progress_made)
+        else:
+            min_bonus = ((
+                progress_made - collision_obstacle_speed) * self.epsilon)
+            bc_offroad_collision_reward = (self.offroad_collision_reward(
+                progress_made, collision_obstacle_speed - 1) - self.epsilon)
+            min_r = min(self.wc_non_critical_error_reward + min_bonus,
+                        bc_offroad_collision_reward)
+            return self.pavement_collision_reward_between(
+                min_r,
+                bc_offroad_collision_reward,
+                self.pavement_collision_reward(progress_made,
+                                               collision_obstacle_speed - 1),
+                self.pavement_collision_reward(progress_made - 1,
+                                               collision_obstacle_speed),
+            )
+
+    def offroad_collision_reward(self, progress_made,
+                                 collision_obstacle_speed):
+        if progress_made < 0:
+            return np.inf
+        elif collision_obstacle_speed < 0:
+            return self.offroad_reward(progress_made)
+        else:
+            min_bonus = ((
+                progress_made - collision_obstacle_speed - 1) * self.epsilon)
+            max_r = (
+                min(
+                    self.pavement_collision_reward(progress_made,
+                                                   collision_obstacle_speed),
+                    self.offroad_collision_reward(progress_made,
+                                                  collision_obstacle_speed - 1)
+                ) - self.epsilon
+            )  # yapf:disable
+
+            min_r = min(self.wc_non_critical_error_reward + min_bonus, max_r)
+            return self.offroad_collision_reward_between(
+                min_r,
+                max_r,
+                self.offroad_collision_reward(progress_made,
+                                              collision_obstacle_speed - 1),
+                self.offroad_collision_reward(progress_made - 1,
+                                              collision_obstacle_speed),
+            )
+
+    def reward(self,
+               progress_made,
+               car_ends_up_on_pavement,
+               collision_obstacle_speed=None):
+        if collision_obstacle_speed is None:
+            if car_ends_up_on_pavement:
+                return self.unobstructed_reward(progress_made)
+            else:
+                return self.offroad_reward(progress_made)
+        else:
+            if car_ends_up_on_pavement:
+                return self.pavement_collision_reward(progress_made,
+                                                      collision_obstacle_speed)
+            else:
+                return self.offroad_collision_reward(progress_made,
+                                                     collision_obstacle_speed)
+
+
+class CachedSituationalReward(SituationalReward):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._u = []
+        self._d = []
+        self._c = [[]]
+        self._h = [[]]
+
+    def unobstructed_reward(self, progress_made):
+        if len(self._u) <= progress_made:
+            self._u.append(super().unobstructed_reward(progress_made))
+        return self._u[progress_made]
+
+    def pavement_collision_is_saved(self, progress_made,
+                                    collision_obstacle_speed):
+        return (len(self._c) > progress_made
+                and len(self._c[progress_made]) > collision_obstacle_speed)
+
+    def pavement_collision_reward(self, progress_made,
+                                  collision_obstacle_speed):
+        if progress_made < 0 or collision_obstacle_speed < 0:
+            return super().pavement_collision_reward(progress_made,
+                                                     collision_obstacle_speed)
+        elif not self.pavement_collision_is_saved(progress_made,
+                                                  collision_obstacle_speed):
+            c = super().pavement_collision_reward(progress_made,
+                                                  collision_obstacle_speed)
+            if len(self._c) <= progress_made:
+                self._c.append([])
+            if len(self._c[progress_made]) <= collision_obstacle_speed:
+                self._c[progress_made].append(c)
+            self.pavement_collision_reward(
+                len(self._c) - 1,
+                len(self._c[0]) - 1)
+        return self._c[progress_made][collision_obstacle_speed]
+
+    def offroad_reward(self, progress_made):
+        if len(self._d) <= progress_made:
+            self._d.append(super().offroad_reward(progress_made))
+        return self._d[progress_made]
+
+    def offroad_collision_is_saved(self, progress_made,
+                                   collision_obstacle_speed):
+        return (len(self._h) > progress_made
+                and len(self._h[progress_made]) > collision_obstacle_speed)
+
+    def offroad_collision_reward(self, progress_made,
+                                 collision_obstacle_speed):
+        if progress_made < 0 or collision_obstacle_speed < 0:
+            return super().offroad_collision_reward(progress_made,
+                                                    collision_obstacle_speed)
+        elif not self.offroad_collision_is_saved(progress_made,
+                                                 collision_obstacle_speed):
+            h = super().offroad_collision_reward(progress_made,
+                                                 collision_obstacle_speed)
+            if len(self._h) <= progress_made:
+                self._h.append([])
+            if len(self._h[progress_made]) <= collision_obstacle_speed:
+                self._h[progress_made].append(h)
+            self.offroad_collision_reward(
+                len(self._h) - 1,
+                len(self._h[0]) - 1)
+        return self._h[progress_made][collision_obstacle_speed]
+
+    def tensors(self, speed_limit):
+        for progress_made, car_ends_up_on_pavement, collision_obstacle_speed in product(
+                range(speed_limit + 1), [True, False], range(speed_limit)):
+            self.reward(progress_made, car_ends_up_on_pavement,
+                        collision_obstacle_speed)
+        return (np.array(self._u), np.array(self._c), np.array(self._d),
+                np.array(self._h))
+
+
+class UniformSituationalReward(CachedSituationalReward):
+    def __init__(self, *args, max_unobstructed_progress_reward=1.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_unobstructed_progress_reward = max_unobstructed_progress_reward
+
+    def unobstructed_reward_at_least(self, min_reward):
+        return np.random.uniform(min_reward,
+                                 self.max_unobstructed_progress_reward)
+
+    def offroad_reward_between(self, min_r, max_r, less_progress_reward):
+        worst_wc_r = np.random.uniform(min_r,
+                                       less_progress_reward + self.epsilon)
+        return np.random.uniform(worst_wc_r, max_r)
+
+    def pavement_collision_reward_between(self, min_r, max_r,
+                                          less_obstacle_speed_reward,
+                                          less_progress_reward):
+        worst_wc_r = np.random.uniform(
+            min_r,
+            min(less_obstacle_speed_reward - self.epsilon,
+                less_progress_reward + self.epsilon, max_r))
+        return np.random.uniform(worst_wc_r, max_r)
+
+    def offroad_collision_reward_between(self, min_r, max_r,
+                                         less_obstacle_speed_reward,
+                                         less_progress_reward):
+        return self.pavement_collision_reward_between(
+            min_r, max_r, less_obstacle_speed_reward, less_progress_reward)
+
+
+class WcSituationalReward(CachedSituationalReward):
+    def unobstructed_reward_at_least(self, min_reward):
+        return min_reward
+
+    def offroad_reward_between(self, min_r, max_r, less_progress_reward):
+        return min_r
+
+    def pavement_collision_reward_between(self, min_r, max_r,
+                                          less_obstacle_speed_reward,
+                                          less_progress_reward):
+        return min_r
+
+    def offroad_collision_reward_between(self, min_r, max_r,
+                                         less_obstacle_speed_reward,
+                                         less_progress_reward):
+        return min_r
+
+
+class BcUniformSituationalReward(UniformSituationalReward):
+    def unobstructed_reward_at_least(self, min_reward):
+        return max(min_reward, self.max_unobstructed_progress_reward)
+
+    def offroad_reward_between(self, min_r, max_r, less_progress_reward):
+        return max_r
+
+    def pavement_collision_reward_between(self, min_r, max_r,
+                                          less_obstacle_speed_reward,
+                                          less_progress_reward):
+        return max_r
+
+    def offroad_collision_reward_between(self, min_r, max_r,
+                                         less_obstacle_speed_reward,
+                                         less_progress_reward):
+        return max_r
+
 
 def sample_reward_bias():
     return np.random.uniform(-1, 1)
@@ -9,93 +248,35 @@ def sample_reward_bias():
 
 MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS = -1.0
 MAX_REWARD_UNOBSTRUCTED_PROGRESS = 1.0
-mp = (MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS +
-    MAX_REWARD_UNOBSTRUCTED_PROGRESS) / 2
-default_epsilon = 1e-10
+REWARD_UNOBSTRUCTED_NO_PROGRESS = (
+    (
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS
+        + MAX_REWARD_UNOBSTRUCTED_PROGRESS
+    ) / 2
+)  # yapf:disable
 
 
-def sample_reward_parameters(speed_limit, epsilon=default_epsilon):
-    u_vec = np.full([speed_limit + 1], mp)
-    d_vec = np.random.uniform(
-        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS, u_vec[0], size=len(u_vec))
-    C = np.random.uniform(
+def sample_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
+    return UniformSituationalReward(
         MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
-        u_vec[0],
-        size=(len(u_vec), speed_limit))
-    H = np.random.uniform(
-        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - epsilon,
-        min(C[0, 0], d_vec[0]),
-        size=(len(u_vec), speed_limit))
-
-    for i in range(1, len(u_vec)):
-        u_vec[i] = np.random.uniform(u_vec[i - 1] + epsilon,
-                                     MAX_REWARD_UNOBSTRUCTED_PROGRESS + i * epsilon)
-        di_min = np.random.uniform(MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
-                                   d_vec[i - 1])
-        d_vec[i] = np.random.uniform(di_min + epsilon, u_vec[i])
-        Cmin = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + epsilon,
-            min(C[i - 1, 0], u_vec[i]))
-        C[i, 0] = np.random.uniform(Cmin, u_vec[i])
-        Hmin = np.random.uniform(MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
-                                 min(C[i, 0], H[i - 1, 0], d_vec[i]))
-        H[i, 0] = np.random.uniform(Hmin, min(C[i, 0], d_vec[i]))
-    for j in range(1, speed_limit):
-        C[0, j] = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - epsilon, C[0, j - 1])
-        H[0, j] = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS - 2 * epsilon,
-            min(C[0, j], H[0, j - 1]))
-    for i, j in product(range(1, len(u_vec)), range(1, speed_limit)):
-        Cmin = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + ((i - j) * epsilon),
-            min(C[i - 1, j], C[i, j - 1]))
-        C[i, j] = np.random.uniform(Cmin, C[i, j - 1])
-        Hmin = np.random.uniform(
-            MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS + (
-                (i - (j + 1)) * epsilon), min(C[i, j], H[i - 1, j],
-                                              H[i, j - 1]))
-        H[i, j] = np.random.uniform(Hmin, min(C[i, j], H[i, j - 1]))
-    return u_vec, C, d_vec, H
+        REWARD_UNOBSTRUCTED_NO_PROGRESS,
+        max_unobstructed_progress_reward=MAX_REWARD_UNOBSTRUCTED_PROGRESS,
+        epsilon=epsilon).tensors(speed_limit)
 
 
-def worst_case_reward_parameters(speed_limit, epsilon=default_epsilon):
-    u_vec = np.full([speed_limit + 1], mp)
-    d_vec = np.full(u_vec.shape, MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
-    C = np.full([speed_limit + 1, speed_limit],
-                MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS)
-    H = C.copy() - epsilon
-    for i in range(1, speed_limit + 1):
-        u_vec[i] = u_vec[i - 1] + epsilon
-        d_vec[i] = d_vec[i - 1] + epsilon
-        C[i, 0] = C[i - 1, 0] + epsilon
-        H[i, 0] = H[i - 1, 0] + epsilon
-    for j in range(1, speed_limit):
-        C[0, j] = C[0, j - 1] - epsilon
-        H[0, j] = H[0, j - 1] - epsilon
-    for i, j in product(range(1, speed_limit + 1), range(1, speed_limit)):
-        C[i, j] += (i - j) * epsilon
-        H[i, j] += (i - j) * epsilon
-    return u_vec, C, d_vec, H
+def worst_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
+    return WcSituationalReward(
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+        REWARD_UNOBSTRUCTED_NO_PROGRESS,
+        epsilon=epsilon).tensors(speed_limit)
 
 
-def best_case_reward_parameters(speed_limit, epsilon=default_epsilon):
-    u_vec = np.full([speed_limit + 1], mp)
-    d_vec = np.full(u_vec.shape, u_vec[0])
-    C = np.full([len(u_vec), speed_limit], u_vec[0])
-    H = C.copy() - epsilon
-    for i in range(1, speed_limit + 1):
-        u_vec[i] = MAX_REWARD_UNOBSTRUCTED_PROGRESS + i * epsilon
-        d_vec[i] = u_vec[i] - epsilon
-        C[i, 0] = u_vec[i] - epsilon
-        H[i, 0] = min(C[i, 0] - epsilon, d_vec[i] - epsilon)
-    for j in range(1, speed_limit):
-        C[0, j] = C[0, j - 1] - epsilon
-        H[0, j] = H[0, j - 1] - epsilon
-    for i, j in product(range(1, speed_limit + 1), range(1, speed_limit)):
-        C[i, j] += (i - j) * epsilon
-        H[i, j] += (i - j) * epsilon
-    return u_vec, C, d_vec, H
+def best_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
+    return BcUniformSituationalReward(
+        MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+        REWARD_UNOBSTRUCTED_NO_PROGRESS,
+        max_unobstructed_progress_reward=MAX_REWARD_UNOBSTRUCTED_PROGRESS,
+        epsilon=epsilon).tensors(speed_limit)
 
 
 def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
