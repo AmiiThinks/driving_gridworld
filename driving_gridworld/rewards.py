@@ -2,7 +2,7 @@ import numpy as np
 from itertools import product
 from driving_gridworld.obstacles import Pedestrian
 
-DEFAULT_EPSILON = 1e-10
+DEFAULT_EPSILON = 1e-5
 
 
 class SituationalReward(object):
@@ -27,7 +27,7 @@ class SituationalReward(object):
     def offroad_reward(self, progress_made):
         min_r = (
             self.wc_non_critical_error_reward + progress_made * self.epsilon)
-        if progress_made < 1:
+        if progress_made < 0:
             return min_r
         else:
             return self.offroad_reward_between(
@@ -44,7 +44,7 @@ class SituationalReward(object):
         else:
             min_bonus = ((
                 progress_made - collision_obstacle_speed) * self.epsilon)
-            bc_offroad_collision_reward = (self.offroad_collision_reward(
+            bc_offroad_collision_reward = (self.pavement_collision_reward(
                 progress_made, collision_obstacle_speed - 1) - self.epsilon)
             min_r = min(self.wc_non_critical_error_reward + min_bonus,
                         bc_offroad_collision_reward)
@@ -140,7 +140,9 @@ class CachedSituationalReward(SituationalReward):
         return self._c[progress_made][collision_obstacle_speed]
 
     def offroad_reward(self, progress_made):
-        if len(self._d) <= progress_made:
+        if progress_made < 0:
+            return super().offroad_reward(progress_made)
+        elif len(self._d) <= progress_made:
             self._d.append(super().offroad_reward(progress_made))
         return self._d[progress_made]
 

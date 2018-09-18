@@ -236,15 +236,6 @@ def test_min_reward_function(columns, action, critical_reward):
     assert patient(sp, action, sp) == patient.reward_for_critical_error
 
 
-def check_equal(array):
-    iterator = iter(array)
-    try:
-        first = next(iterator)
-    except StopIteration:
-        return True
-    return all(first == rest for rest in iterator)
-
-
 @pytest.mark.parametrize("new_reward_function", [
     unshifted_worst_case_determinstic_reward_function,
     unshifted_best_case_determinstic_reward_function,
@@ -270,20 +261,3 @@ def test_best_worst_and_average_case_reward_parameters(new_reward_function):
         if j > 0:
             assert C[i, j - 1] > C[i, j]
             assert H[i, j - 1] > H[i, j]
-
-    for i in rows:
-        check_equal(np.diag(C, k=-i))
-        check_equal(np.diag(H, k=-i))
-
-    for j in columns:
-        check_equal(np.diag(C, k=j))
-        check_equal(np.diag(H, k=j))
-
-
-# TODO: check why the function is not working correctly
-def test_check_equal():
-    a = np.matrix('1 2 3; 4 5 6; 7 8 9')
-    print(a)
-    for i in range(2):
-        check_equal(np.diag(a, k=-i))
-        check_equal(np.diag(a, k=i))
