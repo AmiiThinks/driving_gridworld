@@ -2,7 +2,7 @@ import numpy as np
 from itertools import product
 from driving_gridworld.obstacles import Pedestrian
 
-DEFAULT_EPSILON = 1e-5
+DEFAULT_EPSILON = 1e-10
 
 
 class SituationalReward(object):
