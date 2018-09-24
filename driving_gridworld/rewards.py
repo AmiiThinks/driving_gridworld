@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from itertools import product
 from driving_gridworld.obstacles import Pedestrian
 
@@ -42,8 +43,8 @@ class SituationalReward(object):
         elif collision_obstacle_speed < 0:
             return self.unobstructed_reward(progress_made)
         else:
-            min_bonus = ((
-                progress_made - collision_obstacle_speed) * self.epsilon)
+            min_bonus = (
+                (progress_made - collision_obstacle_speed) * self.epsilon)
             bc_offroad_collision_reward = (self.pavement_collision_reward(
                 progress_made, collision_obstacle_speed - 1) - self.epsilon)
             min_r = min(self.wc_non_critical_error_reward + min_bonus,
@@ -64,8 +65,8 @@ class SituationalReward(object):
         elif collision_obstacle_speed < 0:
             return self.offroad_reward(progress_made)
         else:
-            min_bonus = ((
-                progress_made - collision_obstacle_speed - 1) * self.epsilon)
+            min_bonus = (
+                (progress_made - collision_obstacle_speed - 1) * self.epsilon)
             max_r = (
                 min(
                     self.pavement_collision_reward(progress_made,
@@ -96,8 +97,8 @@ class SituationalReward(object):
                 return self.offroad_reward(progress_made)
         else:
             if car_ends_up_on_pavement:
-                return self.pavement_collision_reward(progress_made,
-                                                      collision_obstacle_speed)
+                return self.pavement_collision_reward(
+                    progress_made, collision_obstacle_speed)
             else:
                 return self.offroad_collision_reward(progress_made,
                                                      collision_obstacle_speed)
@@ -169,13 +170,21 @@ class CachedSituationalReward(SituationalReward):
                 len(self._h[0]) - 1)
         return self._h[progress_made][collision_obstacle_speed]
 
-    def tensors(self, speed_limit):
+    def np(self, speed_limit):
         for progress_made, car_ends_up_on_pavement, collision_obstacle_speed in product(
                 range(speed_limit + 1), [True, False], range(speed_limit)):
             self.reward(progress_made, car_ends_up_on_pavement,
                         collision_obstacle_speed)
         return (np.array(self._u), np.array(self._c), np.array(self._d),
                 np.array(self._h))
+
+    def tf(self, speed_limit):
+        for progress_made, car_ends_up_on_pavement, collision_obstacle_speed in product(
+                range(speed_limit + 1), [True, False], range(speed_limit)):
+            self.reward(progress_made, car_ends_up_on_pavement,
+                        collision_obstacle_speed)
+        return (tf.stack(self._u), tf.stack(self._c), tf.stack(self._d),
+                tf.stack(self._h))
 
 
 class UniformSituationalReward(CachedSituationalReward):
@@ -200,6 +209,36 @@ class UniformSituationalReward(CachedSituationalReward):
             min(less_obstacle_speed_reward - self.epsilon,
                 less_progress_reward + self.epsilon, max_r))
         return np.random.uniform(worst_wc_r, max_r)
+
+    def offroad_collision_reward_between(self, min_r, max_r,
+                                         less_obstacle_speed_reward,
+                                         less_progress_reward):
+        return self.pavement_collision_reward_between(
+            min_r, max_r, less_obstacle_speed_reward, less_progress_reward)
+
+
+class TfUniformSituationalReward(CachedSituationalReward):
+    def __init__(self, *args, max_unobstructed_progress_reward=1.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_unobstructed_progress_reward = max_unobstructed_progress_reward
+
+    def unobstructed_reward_at_least(self, min_reward):
+        return tf.random_uniform(min_reward,
+                                 self.max_unobstructed_progress_reward)
+
+    def offroad_reward_between(self, min_r, max_r, less_progress_reward):
+        worst_wc_r = tf.random_uniform(min_r,
+                                       less_progress_reward + self.epsilon)
+        return tf.random_uniform(worst_wc_r, max_r)
+
+    def pavement_collision_reward_between(self, min_r, max_r,
+                                          less_obstacle_speed_reward,
+                                          less_progress_reward):
+        worst_wc_r = tf.random_uniform(
+            min_r,
+            min(less_obstacle_speed_reward - self.epsilon,
+                less_progress_reward + self.epsilon, max_r))
+        return tf.random_uniform(worst_wc_r, max_r)
 
     def offroad_collision_reward_between(self, min_r, max_r,
                                          less_obstacle_speed_reward,
@@ -263,14 +302,14 @@ def sample_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
         MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
         REWARD_UNOBSTRUCTED_NO_PROGRESS,
         max_unobstructed_progress_reward=MAX_REWARD_UNOBSTRUCTED_PROGRESS,
-        epsilon=epsilon).tensors(speed_limit)
+        epsilon=epsilon).np(speed_limit)
 
 
 def worst_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
     return WcSituationalReward(
         MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
         REWARD_UNOBSTRUCTED_NO_PROGRESS,
-        epsilon=epsilon).tensors(speed_limit)
+        epsilon=epsilon).np(speed_limit)
 
 
 def best_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
@@ -278,7 +317,7 @@ def best_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
         MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
         REWARD_UNOBSTRUCTED_NO_PROGRESS,
         max_unobstructed_progress_reward=MAX_REWARD_UNOBSTRUCTED_PROGRESS,
-        epsilon=epsilon).tensors(speed_limit)
+        epsilon=epsilon).np(speed_limit)
 
 
 def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
@@ -339,8 +378,19 @@ class DeterministicReward(object):
 
     @classmethod
     def average_reward_unshifted(cls, speed_limit, **kwargs):
+        return cls(*average_reward_parameters(speed_limit), **kwargs, bias=0.0)
+
+    @classmethod
+    def tf_sample_reward_unshifted(cls, speed_limit, **kwargs):
         return cls(
-            *average_reward_parameters(speed_limit), **kwargs, bias=0.0)
+            *TfUniformSituationalReward(
+                MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
+                REWARD_UNOBSTRUCTED_NO_PROGRESS,
+                max_unobstructed_progress_reward=
+                MAX_REWARD_UNOBSTRUCTED_PROGRESS,
+                epsilon=DEFAULT_EPSILON).tf(speed_limit),
+            **kwargs,
+            bias=0.0)
 
     def __init__(self, u, C, d, H, bias=None, reward_for_critical_error=-1):
         if bias is None:
