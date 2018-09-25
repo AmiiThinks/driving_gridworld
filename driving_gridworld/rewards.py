@@ -43,12 +43,12 @@ class SituationalReward(object):
         elif collision_obstacle_speed < 0:
             return self.unobstructed_reward(progress_made)
         else:
-            min_bonus = (
-                (progress_made - collision_obstacle_speed) * self.epsilon)
+            min_bonus = ((
+                progress_made - collision_obstacle_speed) * self.epsilon)
             bc_offroad_collision_reward = (self.pavement_collision_reward(
                 progress_made, collision_obstacle_speed - 1) - self.epsilon)
-            min_r = min(self.wc_non_critical_error_reward + min_bonus,
-                        bc_offroad_collision_reward)
+            min_r = self._min(self.wc_non_critical_error_reward + min_bonus,
+                              bc_offroad_collision_reward)
             return self.pavement_collision_reward_between(
                 min_r,
                 bc_offroad_collision_reward,
@@ -65,10 +65,10 @@ class SituationalReward(object):
         elif collision_obstacle_speed < 0:
             return self.offroad_reward(progress_made)
         else:
-            min_bonus = (
-                (progress_made - collision_obstacle_speed - 1) * self.epsilon)
+            min_bonus = ((
+                progress_made - collision_obstacle_speed - 1) * self.epsilon)
             max_r = (
-                min(
+                self._min(
                     self.pavement_collision_reward(progress_made,
                                                    collision_obstacle_speed),
                     self.offroad_collision_reward(progress_made,
@@ -76,7 +76,8 @@ class SituationalReward(object):
                 ) - self.epsilon
             )  # yapf:disable
 
-            min_r = min(self.wc_non_critical_error_reward + min_bonus, max_r)
+            min_r = self._min(self.wc_non_critical_error_reward + min_bonus,
+                              max_r)
             return self.offroad_collision_reward_between(
                 min_r,
                 max_r,
@@ -97,11 +98,14 @@ class SituationalReward(object):
                 return self.offroad_reward(progress_made)
         else:
             if car_ends_up_on_pavement:
-                return self.pavement_collision_reward(
-                    progress_made, collision_obstacle_speed)
+                return self.pavement_collision_reward(progress_made,
+                                                      collision_obstacle_speed)
             else:
                 return self.offroad_collision_reward(progress_made,
                                                      collision_obstacle_speed)
+
+    def _min(self, *args):
+        return min(args)
 
 
 class CachedSituationalReward(SituationalReward):
@@ -193,22 +197,22 @@ class UniformSituationalReward(CachedSituationalReward):
         self.max_unobstructed_progress_reward = max_unobstructed_progress_reward
 
     def unobstructed_reward_at_least(self, min_reward):
-        return np.random.uniform(min_reward,
-                                 self.max_unobstructed_progress_reward)
+        return self._random_uniform(min_reward,
+                                    self.max_unobstructed_progress_reward)
 
     def offroad_reward_between(self, min_r, max_r, less_progress_reward):
-        worst_wc_r = np.random.uniform(min_r,
-                                       less_progress_reward + self.epsilon)
-        return np.random.uniform(worst_wc_r, max_r)
+        worst_wc_r = self._random_uniform(min_r,
+                                          less_progress_reward + self.epsilon)
+        return self._random_uniform(worst_wc_r, max_r)
 
     def pavement_collision_reward_between(self, min_r, max_r,
                                           less_obstacle_speed_reward,
                                           less_progress_reward):
-        worst_wc_r = np.random.uniform(
+        worst_wc_r = self._random_uniform(
             min_r,
-            min(less_obstacle_speed_reward - self.epsilon,
-                less_progress_reward + self.epsilon, max_r))
-        return np.random.uniform(worst_wc_r, max_r)
+            self._min(less_obstacle_speed_reward - self.epsilon,
+                      less_progress_reward + self.epsilon, max_r))
+        return self._random_uniform(worst_wc_r, max_r)
 
     def offroad_collision_reward_between(self, min_r, max_r,
                                          less_obstacle_speed_reward,
@@ -216,35 +220,16 @@ class UniformSituationalReward(CachedSituationalReward):
         return self.pavement_collision_reward_between(
             min_r, max_r, less_obstacle_speed_reward, less_progress_reward)
 
+    def _random_uniform(self, minval=0, maxval=1, shape=[]):
+        return np.random.uniform(low=minval, high=maxval, size=shape)
 
-class TfUniformSituationalReward(CachedSituationalReward):
-    def __init__(self, *args, max_unobstructed_progress_reward=1.0, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.max_unobstructed_progress_reward = max_unobstructed_progress_reward
 
-    def unobstructed_reward_at_least(self, min_reward):
-        return tf.random_uniform(min_reward,
-                                 self.max_unobstructed_progress_reward)
+class TfUniformSituationalReward(UniformSituationalReward):
+    def _random_uniform(self, minval=0, maxval=1, shape=[]):
+        return tf.random_uniform(shape, minval=minval, maxval=maxval)
 
-    def offroad_reward_between(self, min_r, max_r, less_progress_reward):
-        worst_wc_r = tf.random_uniform(min_r,
-                                       less_progress_reward + self.epsilon)
-        return tf.random_uniform(worst_wc_r, max_r)
-
-    def pavement_collision_reward_between(self, min_r, max_r,
-                                          less_obstacle_speed_reward,
-                                          less_progress_reward):
-        worst_wc_r = tf.random_uniform(
-            min_r,
-            min(less_obstacle_speed_reward - self.epsilon,
-                less_progress_reward + self.epsilon, max_r))
-        return tf.random_uniform(worst_wc_r, max_r)
-
-    def offroad_collision_reward_between(self, min_r, max_r,
-                                         less_obstacle_speed_reward,
-                                         less_progress_reward):
-        return self.pavement_collision_reward_between(
-            min_r, max_r, less_obstacle_speed_reward, less_progress_reward)
+    def _min(self, *args):
+        return tf.reduce_min(args)
 
 
 class WcSituationalReward(CachedSituationalReward):
@@ -386,8 +371,8 @@ class DeterministicReward(object):
             *TfUniformSituationalReward(
                 MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
                 REWARD_UNOBSTRUCTED_NO_PROGRESS,
-                max_unobstructed_progress_reward=
-                MAX_REWARD_UNOBSTRUCTED_PROGRESS,
+                max_unobstructed_progress_reward=(
+                    MAX_REWARD_UNOBSTRUCTED_PROGRESS),
                 epsilon=DEFAULT_EPSILON).tf(speed_limit),
             **kwargs,
             bias=0.0)

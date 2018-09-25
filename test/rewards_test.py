@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from driving_gridworld.rewards import DeterministicReward
 from driving_gridworld.rewards import StochasticReward
 from driving_gridworld.rewards import sample_reward_parameters
@@ -247,6 +248,28 @@ def test_best_worst_and_average_case_reward_parameters(new_reward_function):
     C = patient.c
     d = patient.d
     H = patient.h
+    assert len(u) == headlight_range() + 2 == len(d)
+    assert C.shape == (headlight_range() + 2, headlight_range() + 1) == H.shape
+
+    rows = range(0, headlight_range() + 2)
+    columns = range(0, headlight_range() + 1)
+
+    for i, j in product(rows, columns):
+        assert u[i] > d[i]
+        assert d[i] > H[i, j]
+        assert u[i] > C[i, j]
+        assert C[i, j] > H[i, j]
+        if j > 0:
+            assert C[i, j - 1] > C[i, j]
+            assert H[i, j - 1] > H[i, j]
+
+
+def test_tf_uniform_reward():
+    patient = DeterministicReward.tf_sample_reward_unshifted(
+        headlight_range() + 1)
+
+    with tf.Session() as sess:
+        u, C, d, H = sess.run([patient.u, patient.c, patient.d, patient.h])
     assert len(u) == headlight_range() + 2 == len(d)
     assert C.shape == (headlight_range() + 2, headlight_range() + 1) == H.shape
 
