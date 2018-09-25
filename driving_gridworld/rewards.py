@@ -305,7 +305,7 @@ def best_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
         epsilon=epsilon).np(speed_limit)
 
 
-def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
+def r(u, C, d, H, reward_for_critical_error, s, a, s_prime, mode='np'):
     if s.has_crashed() or s_prime.has_crashed():
         return reward_for_critical_error
 
@@ -329,12 +329,19 @@ def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
 
     if car_ends_up_on_pavement:
         without_collision = u
-        with_collision = C - np.expand_dims(u, axis=1)
+        with_collision = C - (tf if mode == 'tf' else np).expand_dims(
+            u, axis=1)
     else:
         without_collision = d
-        with_collision = H - np.expand_dims(d, axis=1)
+        with_collision = H - (tf if mode == 'tf' else np).expand_dims(
+            d, axis=1)
 
-    return (without_collision[distance] +
+    if mode == 'tf':
+        return (without_collision[distance] + tf.reduce_sum(
+            tf.gather(with_collision[distance, :], collided_obstacles_speed)))
+    else:
+        return (
+            without_collision[distance] +
             with_collision[distance, :].take(collided_obstacles_speed).sum())
 
 
@@ -375,9 +382,17 @@ class DeterministicReward(object):
                     MAX_REWARD_UNOBSTRUCTED_PROGRESS),
                 epsilon=DEFAULT_EPSILON).tf(speed_limit),
             **kwargs,
-            bias=0.0)
+            bias=0.0,
+            mode='tf')
 
-    def __init__(self, u, C, d, H, bias=None, reward_for_critical_error=-1):
+    def __init__(self,
+                 u,
+                 C,
+                 d,
+                 H,
+                 bias=None,
+                 reward_for_critical_error=-1,
+                 mode='np'):
         if bias is None:
             bias = sample_reward_bias()
         self.u = u + bias
@@ -385,10 +400,19 @@ class DeterministicReward(object):
         self.d = d + bias
         self.h = H + bias
         self.reward_for_critical_error = reward_for_critical_error + bias
+        self.mode = mode
 
     def __call__(self, s, a, s_p):
-        reward = r(self.u, self.c, self.d, self.h,
-                   self.reward_for_critical_error, s, a, s_p)
+        reward = r(
+            self.u,
+            self.c,
+            self.d,
+            self.h,
+            self.reward_for_critical_error,
+            s,
+            a,
+            s_p,
+            mode=self.mode)
         return reward
 
 
