@@ -328,21 +328,22 @@ def r(u, C, d, H, reward_for_critical_error, s, a, s_prime, mode='np'):
     car_ends_up_on_pavement = 1 <= s_prime.car.col <= 2
 
     if car_ends_up_on_pavement:
-        without_collision = u
-        with_collision = C - (tf if mode == 'tf' else np).expand_dims(
-            u, axis=1)
+        without_collision = u[distance]
+        with_collision = C[distance, :]
     else:
-        without_collision = d
-        with_collision = H - (tf if mode == 'tf' else np).expand_dims(
-            d, axis=1)
+        without_collision = d[distance]
+        with_collision = H[distance, :]
 
-    if mode == 'tf':
-        return (without_collision[distance] + tf.reduce_sum(
-            tf.gather(with_collision[distance, :], collided_obstacles_speed)))
-    else:
-        return (
-            without_collision[distance] +
-            with_collision[distance, :].take(collided_obstacles_speed).sum())
+    total_with_collision = 0.0
+    if len(collided_obstacles_speed) > 0:
+        if mode == 'tf':
+            total_with_collision = tf.reduce_sum(
+                tf.gather(with_collision, collided_obstacles_speed))
+        else:
+            total_with_collision = with_collision.take(
+                collided_obstacles_speed).sum()
+    return total_with_collision - without_collision * (
+        len(collided_obstacles_speed) - 1)
 
 
 class DeterministicReward(object):
