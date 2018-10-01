@@ -403,6 +403,10 @@ class DeterministicReward(object):
         self.reward_for_critical_error = reward_for_critical_error + bias
         self.mode = mode
 
+        if mode == 'tf':
+            self.reward_for_critical_error = tf.constant(
+                self.reward_for_critical_error)
+
     def __call__(self, s, a, s_p):
         reward = r(
             self.u,

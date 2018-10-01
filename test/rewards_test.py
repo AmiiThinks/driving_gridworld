@@ -264,23 +264,41 @@ def test_best_worst_and_average_case_reward_parameters(new_reward_function):
             assert H[i, j - 1] > H[i, j]
 
 
-def test_tf_uniform_reward():
-    patient = DeterministicReward.tf_sample_reward_unshifted(
-        headlight_range() + 1)
+class TestTfUniformRewardFunction(tf.test.TestCase):
+    def test_tf_uniform_reward_creation(self):
+        patient = DeterministicReward.tf_sample_reward_unshifted(
+            headlight_range() + 1)
 
-    with tf.Session() as sess:
-        u, C, d, H = sess.run([patient.u, patient.c, patient.d, patient.h])
-    assert len(u) == headlight_range() + 2 == len(d)
-    assert C.shape == (headlight_range() + 2, headlight_range() + 1) == H.shape
+        with self.test_session() as sess:
+            u, C, d, H = sess.run([patient.u, patient.c, patient.d, patient.h])
+        assert len(u) == headlight_range() + 2 == len(d)
+        assert C.shape == (headlight_range() + 2,
+                           headlight_range() + 1) == H.shape
 
-    rows = range(0, headlight_range() + 2)
-    columns = range(0, headlight_range() + 1)
+        rows = range(0, headlight_range() + 2)
+        columns = range(0, headlight_range() + 1)
 
-    for i, j in product(rows, columns):
-        assert u[i] > d[i]
-        assert d[i] > H[i, j]
-        assert u[i] > C[i, j]
-        assert C[i, j] > H[i, j]
-        if j > 0:
-            assert C[i, j - 1] > C[i, j]
-            assert H[i, j - 1] > H[i, j]
+        for i, j in product(rows, columns):
+            assert u[i] > d[i]
+            assert d[i] > H[i, j]
+            assert u[i] > C[i, j]
+            assert C[i, j] > H[i, j]
+            if j > 0:
+                assert C[i, j - 1] > C[i, j]
+                assert H[i, j - 1] > H[i, j]
+
+    def test_tf_uniform_reward_crashing_into_a_wall(self):
+        patient = DeterministicReward.tf_sample_reward_unshifted(
+            headlight_range() + 1, reward_for_critical_error=-1)
+
+        with self.test_session() as sess:
+            for columns in [(0, -1), (3, 4)]:
+                s = new_road(car_col=columns[0])
+                sp = new_road(car_col=columns[1])
+
+                assert not s.has_crashed()
+                assert sp.has_crashed()
+
+                for action in ACTIONS:
+                    assert sess.run(patient(s, action, sp)) == -1
+                    assert sess.run(patient(sp, action, sp)) == -1
