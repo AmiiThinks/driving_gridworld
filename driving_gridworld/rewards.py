@@ -392,7 +392,7 @@ class DeterministicReward(object):
                  d,
                  H,
                  bias=None,
-                 reward_for_critical_error=-1,
+                 reward_for_critical_error=-1.0,
                  mode='np'):
         if bias is None:
             bias = sample_reward_bias()
@@ -426,7 +426,7 @@ class StochasticReward(object):
     def unshifted(cls, *args, **kwargs):
         return cls(*args, **kwargs, bias=0.0)
 
-    def __init__(self, bias=None, reward_for_critical_error=-1):
+    def __init__(self, bias=None, reward_for_critical_error=-1.0):
         if bias is None:
             bias = sample_reward_bias()
         self.bias = bias
