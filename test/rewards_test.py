@@ -1,4 +1,5 @@
 import numpy as np
+from driving_gridworld.rewards import SituationalReward
 from driving_gridworld.rewards import DeterministicReward
 from driving_gridworld.rewards import StochasticReward
 from driving_gridworld.rewards import sample_reward_parameters
@@ -13,6 +14,14 @@ from itertools import product
 
 def headlight_range():
     return 4
+
+
+def wc_non_critical_error_reward():
+    return -1.0
+
+
+def stopping_reward():
+    return 0.0
 
 
 def new_road(*obstacles, speed=headlight_range(), car_col=1):
@@ -37,6 +46,10 @@ def test_sample_reward_parameters(seed):
         if j > 0:
             assert C[i, j - 1] > C[i, j]
             assert H[i, j - 1] > H[i, j]
+
+
+def situational_reward_function():
+    return SituationalReward(wc_non_critical_error_reward(), stopping_reward())
 
 
 def determinstic_reward_function():

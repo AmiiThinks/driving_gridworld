@@ -10,10 +10,12 @@ class SituationalReward(object):
     def __init__(self,
                  wc_non_critical_error_reward,
                  stopping_reward,
-                 epsilon=DEFAULT_EPSILON):
+                 epsilon=DEFAULT_EPSILON,
+                 reward_for_critical_error=-10.0):
         self.wc_non_critical_error_reward = wc_non_critical_error_reward
         self.stopping_reward = stopping_reward
         self.epsilon = epsilon
+        self.reward_for_critical_error = reward_for_critical_error
 
     def unobstructed_reward(self, progress_made):
         if progress_made < 1:
@@ -102,6 +104,34 @@ class SituationalReward(object):
             else:
                 return self.offroad_collision_reward(progress_made,
                                                      collision_obstacle_speed)
+
+    def __call__(self, s, a, s_prime):
+        distance = s.car.progress_toward_destination(a)
+        car_ends_up_on_pavement = 1 <= s_prime.car.col <= 2
+
+        if s.has_crashed() or s_prime.has_crashed():
+            return self.reward_for_critical_error
+
+        min_col = min(s.car.col, s_prime.car.col)
+        max_col = max(s.car.col, s_prime.car.col)
+
+        def obstacle_could_encounter_car(obs, obs_prime):
+            return (min_col <= obs_prime.col <= max_col
+                    and max(obs.row, 0) <= s.car_row() <= obs_prime.row)
+
+        reward_without_collision = self.reward(distance,
+                                               car_ends_up_on_pavement)
+        rewards_collided_obstacles = []
+        for obs, obs_prime in zip(s.obstacles, s_prime.obstacles):
+            if obstacle_could_encounter_car(obs, obs_prime):
+                if isinstance(obs, Pedestrian):
+                    return self.reward_for_critical_error
+                else:
+                    rewards_collided_obstacles.append(
+                        self.reward(distance, car_ends_up_on_pavement,
+                                    obs.speed) - reward_without_collision)
+
+        return sum(rewards_collided_obstacles) + reward_without_collision
 
 
 class CachedSituationalReward(SituationalReward):
