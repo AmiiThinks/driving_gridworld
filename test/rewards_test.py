@@ -1,6 +1,11 @@
 import numpy as np
 import tensorflow as tf
-from driving_gridworld.rewards import SituationalReward
+tf.enable_eager_execution()
+from driving_gridworld.rewards import \
+    UniformSituationalReward, \
+    TfUniformSituationalReward, \
+    WcSituationalReward, \
+    BcUniformSituationalReward
 from driving_gridworld.rewards import DeterministicReward
 from driving_gridworld.rewards import StochasticReward
 from driving_gridworld.rewards import sample_reward_parameters
@@ -49,8 +54,11 @@ def test_sample_reward_parameters(seed):
             assert H[i, j - 1] > H[i, j]
 
 
-def situational_reward_function():
-    return SituationalReward(wc_non_critical_error_reward(), stopping_reward())
+def situational_reward_function(cls, reward_for_critical_error=-1):
+    return cls(
+        wc_non_critical_error_reward(),
+        stopping_reward(),
+        reward_for_critical_error=reward_for_critical_error)
 
 
 def determinstic_reward_function():
@@ -98,8 +106,17 @@ def unshifted_average_case_determinstic_reward_function(
         reward_for_critical_error=reward_for_critical_error)
 
 
+all_situational_reward_function_constructors = list(map(
+    lambda cls: lambda *args, **kwargs: situational_reward_function(cls, *args, **kwargs), [
+        UniformSituationalReward, TfUniformSituationalReward,
+        WcSituationalReward, BcUniformSituationalReward
+    ]
+))
+
+
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward])
+                         [determinstic_reward_function, StochasticReward] +
+                         all_situational_reward_function_constructors)
 def test_collision_is_worse_than_no_collision(new_reward_function):
     np.random.seed(42)
     _patient = new_reward_function()
@@ -116,7 +133,8 @@ def test_collision_is_worse_than_no_collision(new_reward_function):
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward])
+                         [determinstic_reward_function, StochasticReward] +
+                         all_situational_reward_function_constructors)
 def test_collision_with_faster_obstacle_is_worse_than_one_with_a_slower_obstacle(
         new_reward_function):
     np.random.seed(42)
@@ -134,7 +152,8 @@ def test_collision_with_faster_obstacle_is_worse_than_one_with_a_slower_obstacle
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward])
+                         [determinstic_reward_function, StochasticReward] +
+                         all_situational_reward_function_constructors)
 def test_more_collisions_are_worse(new_reward_function):
     np.random.seed(42)
     _patient = new_reward_function()
@@ -151,7 +170,8 @@ def test_more_collisions_are_worse(new_reward_function):
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward])
+                         [determinstic_reward_function, StochasticReward] +
+                         all_situational_reward_function_constructors)
 def test_driving_faster_with_no_obstacles_gives_larger_reward(
         new_reward_function):
     np.random.seed(42)
@@ -168,7 +188,8 @@ def test_driving_faster_with_no_obstacles_gives_larger_reward(
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward])
+                         [determinstic_reward_function, StochasticReward] +
+                         all_situational_reward_function_constructors)
 def test_reward_is_minimal_when_car_hits_moving_pedestrian(
         new_reward_function):
     np.random.seed(42)
@@ -182,7 +203,8 @@ def test_reward_is_minimal_when_car_hits_moving_pedestrian(
 
 @pytest.mark.parametrize("columns", [(0, -1), (3, 4)])
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward])
+                         [determinstic_reward_function, StochasticReward] +
+                         all_situational_reward_function_constructors)
 @pytest.mark.parametrize("action", ACTIONS)
 def test_crashing_into_a_wall(columns, new_reward_function, action):
     np.random.seed(42)
@@ -200,7 +222,8 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
 
 @pytest.mark.parametrize(
     "new_reward_function",
-    [unshifted_determinstic_reward_function, StochasticReward.unshifted])
+    [unshifted_determinstic_reward_function, StochasticReward.unshifted] +
+    all_situational_reward_function_constructors)
 def test_unshifted_reward_function(new_reward_function):
     np.random.seed(42)
     patient = new_reward_function()
@@ -209,7 +232,8 @@ def test_unshifted_reward_function(new_reward_function):
 
 @pytest.mark.parametrize(
     "new_reward_function",
-    [unshifted_determinstic_reward_function, StochasticReward.unshifted])
+    [unshifted_determinstic_reward_function, StochasticReward.unshifted] +
+    all_situational_reward_function_constructors)
 @pytest.mark.parametrize("critical_reward",
                          [float(i) for i in range(-1, -11, -1)])
 def test_unshifted_reward_fuction_with_variable_reward_for_critical_error(
@@ -275,43 +299,3 @@ def test_best_worst_and_average_case_reward_parameters(new_reward_function):
         if j > 0:
             assert C[i, j - 1] > C[i, j]
             assert H[i, j - 1] > H[i, j]
-
-
-class TestTfUniformRewardFunction(tf.test.TestCase):
-    def test_tf_uniform_reward_creation(self):
-        patient = DeterministicReward.tf_sample_reward_unshifted(
-            headlight_range() + 1)
-
-        with self.test_session() as sess:
-            u, C, d, H = sess.run([patient.u, patient.c, patient.d, patient.h])
-        assert len(u) == headlight_range() + 2 == len(d)
-        assert C.shape == (headlight_range() + 2,
-                           headlight_range() + 1) == H.shape
-
-        rows = range(0, headlight_range() + 2)
-        columns = range(0, headlight_range() + 1)
-
-        for i, j in product(rows, columns):
-            assert u[i] > d[i]
-            assert d[i] > H[i, j]
-            assert u[i] > C[i, j]
-            assert C[i, j] > H[i, j]
-            if j > 0:
-                assert C[i, j - 1] > C[i, j]
-                assert H[i, j - 1] > H[i, j]
-
-    def test_tf_uniform_reward_crashing_into_a_wall(self):
-        patient = DeterministicReward.tf_sample_reward_unshifted(
-            headlight_range() + 1, reward_for_critical_error=-1)
-
-        with self.test_session() as sess:
-            for columns in [(0, -1), (3, 4)]:
-                s = new_road(car_col=columns[0])
-                sp = new_road(car_col=columns[1])
-
-                assert not s.has_crashed()
-                assert sp.has_crashed()
-
-                for action in ACTIONS:
-                    assert sess.run(patient(s, action, sp)) == -1
-                    assert sess.run(patient(sp, action, sp)) == -1

@@ -335,7 +335,7 @@ def best_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
         epsilon=epsilon).np(speed_limit)
 
 
-def r(u, C, d, H, reward_for_critical_error, s, a, s_prime, mode='np'):
+def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
     if s.has_crashed() or s_prime.has_crashed():
         return reward_for_critical_error
 
@@ -366,12 +366,8 @@ def r(u, C, d, H, reward_for_critical_error, s, a, s_prime, mode='np'):
 
     total_with_collision = 0.0
     if len(collided_obstacles_speed) > 0:
-        if mode == 'tf':
-            total_with_collision = tf.reduce_sum(
-                tf.gather(with_collision, collided_obstacles_speed))
-        else:
-            total_with_collision = with_collision.take(
-                collided_obstacles_speed).sum()
+        total_with_collision = with_collision.take(
+            collided_obstacles_speed).sum()
     return total_with_collision - without_collision * (
         len(collided_obstacles_speed) - 1)
 
@@ -403,27 +399,7 @@ class DeterministicReward(object):
     def average_reward_unshifted(cls, speed_limit, **kwargs):
         return cls(*average_reward_parameters(speed_limit), **kwargs, bias=0.0)
 
-    @classmethod
-    def tf_sample_reward_unshifted(cls, speed_limit, **kwargs):
-        return cls(
-            *TfUniformSituationalReward(
-                MIN_REWARD_OBSTRUCTION_WITHOUT_PROGRESS,
-                REWARD_UNOBSTRUCTED_NO_PROGRESS,
-                max_unobstructed_progress_reward=(
-                    MAX_REWARD_UNOBSTRUCTED_PROGRESS),
-                epsilon=DEFAULT_EPSILON).tf(speed_limit),
-            **kwargs,
-            bias=0.0,
-            mode='tf')
-
-    def __init__(self,
-                 u,
-                 C,
-                 d,
-                 H,
-                 bias=None,
-                 reward_for_critical_error=-1.0,
-                 mode='np'):
+    def __init__(self, u, C, d, H, bias=None, reward_for_critical_error=-1.0):
         if bias is None:
             bias = sample_reward_bias()
         self.u = u + bias
@@ -431,23 +407,10 @@ class DeterministicReward(object):
         self.d = d + bias
         self.h = H + bias
         self.reward_for_critical_error = reward_for_critical_error + bias
-        self.mode = mode
-
-        if mode == 'tf':
-            self.reward_for_critical_error = tf.constant(
-                self.reward_for_critical_error)
 
     def __call__(self, s, a, s_p):
-        reward = r(
-            self.u,
-            self.c,
-            self.d,
-            self.h,
-            self.reward_for_critical_error,
-            s,
-            a,
-            s_p,
-            mode=self.mode)
+        reward = r(self.u, self.c, self.d, self.h,
+                   self.reward_for_critical_error, s, a, s_p)
         return reward
 
 
