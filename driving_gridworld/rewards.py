@@ -167,11 +167,7 @@ class CachedSituationalReward(SituationalReward):
                                                   collision_obstacle_speed)
             if len(self._c) <= progress_made:
                 self._c.append([])
-            if len(self._c[progress_made]) <= collision_obstacle_speed:
-                self._c[progress_made].append(c)
-            self.pavement_collision_reward(
-                len(self._c) - 1,
-                len(self._c[0]) - 1)
+            self._c[progress_made].append(c)
         return self._c[progress_made][collision_obstacle_speed]
 
     def offroad_reward(self, progress_made):
@@ -197,11 +193,7 @@ class CachedSituationalReward(SituationalReward):
                                                  collision_obstacle_speed)
             if len(self._h) <= progress_made:
                 self._h.append([])
-            if len(self._h[progress_made]) <= collision_obstacle_speed:
-                self._h[progress_made].append(h)
-            self.offroad_collision_reward(
-                len(self._h) - 1,
-                len(self._h[0]) - 1)
+            self._h[progress_made].append(h)
         return self._h[progress_made][collision_obstacle_speed]
 
     def np(self, speed_limit):
