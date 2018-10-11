@@ -1,10 +1,10 @@
 import numpy as np
-from driving_gridworld.road import Road
+from driving_gridworld.road import Road, product_combination_pairs
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
 from driving_gridworld.actions import ACTIONS, RIGHT, LEFT, UP, DOWN, NO_OP
-from driving_gridworld.road import product_combination_pairs
+from driving_gridworld.rewards import WcSituationalReward
 import pytest
 
 
@@ -317,32 +317,82 @@ def test_crashing_into_right_wall():
 
 @pytest.mark.parametrize("speed", range(7))
 def test_successor_probabilities(speed):
-    state = Road(headlight_range=6, car=Car(1, speed), obstacles=[Bump(-1, -1)])
-    probs = [p for (s,p) in state.successors(UP)]
+    state = Road(
+        headlight_range=6, car=Car(1, speed), obstacles=[Bump(-1, -1)])
+    probs = [p for (s, p) in state.successors(UP)]
     assert sum(probs) == pytest.approx(1.0)
 
 
 def test_probabilities_error():
-    state = Road(headlight_range=3, car=Car(1, 1), obstacles=[Bump(-1, -1), Bump(-1, -1)])
-    probs = [p for (s,p) in state.successors(NO_OP)]
+    state = Road(
+        headlight_range=3,
+        car=Car(1, 1),
+        obstacles=[Bump(-1, -1), Bump(-1, -1)])
+    probs = [p for (s, p) in state.successors(NO_OP)]
     assert sum(probs) == pytest.approx(1.0)
 
 
 def test_permutations():
-    patient = product_combination_pairs(
-        [(0, i) for i in range(4)],
-        [0, 1],
-        2
-    )
+    patient = product_combination_pairs([(0, i) for i in range(4)], [0, 1], 2)
     assert len(list(patient)) == 16
 
 
 def test_successor_function_with_identical_states():
-    expected_probs = [0.64, 0.08, 0.08, 0.08, 0.08, 0.0025, 0.005, 0.005, 0.005,
-        0.0025, 0.005, 0.005, 0.0025, 0.005, 0.0025]
-    state = Road(headlight_range = 3, car=Car(1, 1), obstacles=[Bump(-1, -1), Bump(-1, -1)])
-    probs = [p for (s,p) in state.successors(NO_OP)]
+    expected_probs = [
+        0.64, 0.08, 0.08, 0.08, 0.08, 0.0025, 0.005, 0.005, 0.005, 0.0025,
+        0.005, 0.005, 0.0025, 0.005, 0.0025
+    ]
+    state = Road(
+        headlight_range=3,
+        car=Car(1, 1),
+        obstacles=[Bump(-1, -1), Bump(-1, -1)])
+    probs = [p for (s, p) in state.successors(NO_OP)]
     assert sum(probs) == pytest.approx(1.0)
     assert len(probs) == len(expected_probs)
     for i in range(len(probs)):
         assert probs[i] == pytest.approx(expected_probs[i])
+
+
+def test_tabulate_single_reward():
+    patient = Road(headlight_range=1, car=Car(2, 0), obstacles=[Bump(-1, -1)])
+    transitions, rewards, state_indices = patient.tabulate(
+        WcSituationalReward(
+            wc_non_critical_error_reward=-1.0, stopping_reward=0.0))
+
+    transitions = np.array(transitions)
+    rewards = np.array(rewards)
+
+    assert len(transitions.shape) == 3
+    assert len(rewards.shape) == 2
+
+    assert transitions.shape[0] == len(state_indices)
+    assert transitions.shape[0] == rewards.shape[0]
+    assert transitions.shape[1] == rewards.shape[1]
+
+    for t in transitions:
+        for ta in t:
+            assert sum(ta) == pytest.approx(1.0)
+
+
+def test_tabulate_multiple_reward():
+    patient = Road(headlight_range=1, car=Car(2, 0), obstacles=[Bump(-1, -1)])
+    transitions, rewards, state_indices = patient.tabulate(
+        WcSituationalReward(
+            wc_non_critical_error_reward=-1.0, stopping_reward=0.0),
+        WcSituationalReward(
+            wc_non_critical_error_reward=-2.0, stopping_reward=0.0))
+
+    transitions = np.array(transitions)
+    rewards = np.array(rewards)
+
+    assert len(transitions.shape) == 3
+    assert len(rewards.shape) == 3
+
+    assert transitions.shape[0] == len(state_indices)
+    assert transitions.shape[0] == rewards.shape[0]
+    assert transitions.shape[1] == rewards.shape[1]
+    assert rewards.shape[2] == 2
+
+    for t in transitions:
+        for ta in t:
+            assert sum(ta) == pytest.approx(1.0)

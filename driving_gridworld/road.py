@@ -1,7 +1,8 @@
-from itertools import product, permutations, combinations
+from itertools import product, combinations
 import numpy as np
 from pycolab.rendering import Observation
 from collections import defaultdict
+from driving_gridworld.actions import ACTIONS
 
 
 def _byte(c, encoding='ascii'):
@@ -175,7 +176,8 @@ class Road(object):
                     prob_not_appearing_closer = ((1.0 - p)**(
                         distance - next_obstacle.row - 1))
                     prob_appearing_in_row = p * prob_not_appearing_closer
-                    prob *= prob_appearing_in_row / float(len(self._allowed_obstacle_appearance_columns[i]))
+                    prob *= prob_appearing_in_row / float(
+                        len(self._allowed_obstacle_appearance_columns[i]))
                 else:
                     next_obstacle = obs.next(distance)
                     prob *= (1.0 - p)**distance
@@ -203,7 +205,7 @@ class Road(object):
         for o in self._obstacles:
             if self.obstacle_is_visible(o):
                 k = (str(o), o.row, o.col, o.speed)
-                k_prime = k + (dup_count[k],)
+                k_prime = k + (dup_count[k], )
                 dup_count[k] += 1
                 obstacles.append(k_prime)
         return (self._car.col, self._car.speed, frozenset(obstacles))
@@ -310,3 +312,74 @@ class Road(object):
 
     def obstacle_is_visible(self, obs):
         return not self.obstacle_outside_car_path(obs) and obs.row >= 0
+
+    class IndexMap(object):
+        def __init__(self):
+            self._map = {}
+
+        def __len__(self):
+            return len(self._map)
+
+        def __getitem__(self, item):
+            if item not in self._map:
+                self._map[item] = len(self)
+            return self._map[item]
+
+        def __str__(self):
+            return str(self._map)
+
+    def tabulate(self, *reward_functions, print_every=None):
+        transitions = []
+        visited = set()
+        state_indices = self.IndexMap()
+        rewards = []
+        to_be_visited = [(self, self.to_key())]
+        while to_be_visited:
+            s, s_key = to_be_visited.pop()
+
+            if s_key in visited: continue
+            visited.add(s_key)
+
+            s_i = state_indices[s_key]
+
+            while len(rewards) <= s_i:
+                if len(reward_functions) > 1:
+                    rewards_for_state = [[0.0] * len(reward_functions)
+                                         for _ in range(len(ACTIONS))]
+                else:
+                    rewards_for_state = [0.0] * len(ACTIONS)
+                rewards.append(rewards_for_state)
+            while len(transitions) <= s_i:
+                transitions.append([[] for _ in range(len(ACTIONS))])
+
+            for j, a in enumerate(ACTIONS):
+                sum_r = [0.0] * len(reward_functions)
+                for i, (s_prime, p) in enumerate(s.successors(a)):
+                    s_prime_key = s_prime.to_key()
+                    if s_prime_key not in visited:
+                        to_be_visited.append((s_prime, s_prime_key))
+
+                    s_prime_i = state_indices[s_prime_key]
+                    while len(transitions[s_i][j]) <= s_prime_i:
+                        transitions[s_i][j].append(0.0)
+                    transitions[s_i][j][s_prime_i] = p
+
+                    for k, r in enumerate(reward_functions):
+                        sum_r[k] += r(s, a, s_prime) * p
+
+                if len(reward_functions) > 1:
+                    for k in range(len(reward_functions)):
+                        rewards[s_i][j][k] = sum_r[k]
+                else:
+                    rewards[s_i][j] = sum_r[0]
+
+            if print_every is not None and len(visited) % print_every == 0:
+                print('{} / {} visited'.format(
+                    len(visited), len(to_be_visited)))
+
+        for i in range(len(state_indices)):
+            for j in range(len(ACTIONS)):
+                while len(transitions[i][j]) < len(state_indices):
+                    transitions[i][j].append(0.0)
+
+        return transitions, rewards, state_indices
