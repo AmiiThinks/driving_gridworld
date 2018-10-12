@@ -396,3 +396,16 @@ def test_tabulate_multiple_reward():
     for t in transitions:
         for ta in t:
             assert sum(ta) == pytest.approx(1.0)
+
+
+def test_safety_counter():
+    patient = Road(headlight_range=1, car=Car(2, 0), obstacles=[Bump(-1, -1)])
+    counter_list, state_indices = patient.safety_counter()
+
+    counter_list = np.array(counter_list)
+
+    assert len(counter_list.shape) == 3
+
+    assert counter_list.shape[0] == len(state_indices)
+    assert counter_list.shape[1] == len(ACTIONS)
+    assert counter_list.shape[2] == len(state_indices)
