@@ -244,8 +244,8 @@ class Road(object):
 
     def speedometer_layer(self):
         layer = np.full([self._num_rows(), self._stage_width], False)
-        layer[self.speed_limit() -
-              self._car.speed:, self._speedometer_col_idx] = True
+        layer[self.speed_limit() - self._car.speed:,
+              self._speedometer_col_idx] = True
         return layer
 
     def obstacle_layers(self):
@@ -385,8 +385,42 @@ class Road(object):
 
         return transitions, rewards, state_indices
 
-    def safety_counter(self):
-        counter_list = []
+    def count_obstacle_collisions(self, s_prime, *value_for_obs):
+        counts = [0] * len(value_for_obs)
+
+        min_col = min(self.car.col, s_prime.car.col)
+        max_col = max(self.car.col, s_prime.car.col)
+
+        def obstacle_could_encounter_car(obs, obs_prime):
+            return (min_col <= obs_prime.col <= max_col
+                    and max(obs.row, 0) <= self.car_row() <= obs_prime.row)
+
+        for obs, obs_prime in zip(self.obstacles, s_prime.obstacles):
+            if obstacle_could_encounter_car(obs, obs_prime):
+                for i, v in enumerate(value_for_obs):
+                    value = v(obs)
+                    if value is not None:
+                        counts[i] += value
+                        break
+        return counts
+
+    def safety_information(self):
+        '''
+        Returns the safety information associated with each state-action-next
+        state sequence.
+
+        Returns:
+        - An |S| x |A| x |S| x 5 information tensor. The information is
+        arranged as:
+            - the number of `Pedestrian` collisions,
+            - the number of `Bump` collisions,
+            - whether or not the car ended up off the pavement,
+            - the car's speed,
+            - and the amount of progress the car made.
+        - A `dict` mapping between state keys and the state indices, in the
+        order used to construct the information tensor.
+        '''
+        info = []
 
         visited = set()
         state_indices = self.IndexMap()
@@ -395,13 +429,12 @@ class Road(object):
         while to_be_visited:
             s, s_key = to_be_visited.pop()
 
-            if s_key in visited:
-                continue  # we break out of loop? (in the first rum there is a single state in to_be_visited ??)
+            if s_key in visited: continue
             visited.add(s_key)
             s_i = state_indices[s_key]
 
-            while len(counter_list) <= s_i:
-                counter_list.append([[] for _ in range(len(ACTIONS))])
+            while len(info) <= s_i:
+                info.append([[] for _ in range(len(ACTIONS))])
 
             for j, a in enumerate(ACTIONS):
                 for i, (s_prime, p) in enumerate(s.successors(a)):
@@ -410,43 +443,23 @@ class Road(object):
                         to_be_visited.append((s_prime, s_prime_key))
 
                     s_prime_i = state_indices[s_prime_key]
-                    while len(counter_list[s_i][j]) <= s_prime_i:
-                        counter_list[s_i][j].append([0.0, 0.0, 0.0, 0.0, 0.0])
 
-                    tup = count_obstacles_collision(
-                        s, s_prime, lambda obs: isinstance(obs, Pedestrian),
-                        lambda obs: isinstance(obs, Bump))
-                    tup += [
-                        int(drove_on_ditch(s_prime)), s.car.speed,
+                    sas_info = s.count_obstacle_collisions(
+                        s_prime,
+                        lambda obs: 1 if isinstance(obs, Pedestrian) else None,
+                        lambda obs: 1 if isinstance(obs, Bump) else None)
+                    sas_info += [
+                        1 if s_prime.is_off_road() else 0, s.car.speed,
                         s.car.progress_toward_destination(a)
                     ]
-                    counter_list[s_i][j][s_prime_i] = tup
+
+                    while len(info[s_i][j]) <= s_prime_i:
+                        info[s_i][j].append([0.0] * len(sas_info))
+
+                    info[s_i][j][s_prime_i] = sas_info
 
         for i in range(len(state_indices)):
             for j in range(len(ACTIONS)):
-                while len(counter_list[i][j]) < len(state_indices):
-                    counter_list[i][j].append([0.0, 0.0, 0.0, 0.0, 0.0])
-        return counter_list, state_indices
-
-
-def obstacle_could_encounter_car(obs, obs_prime, s, s_prime):
-    min_col = min(s.car.col, s_prime.car.col)
-    max_col = max(s.car.col, s_prime.car.col)
-    return (min_col <= obs_prime.col <= max_col
-            and max(obs.row, 0) <= s.car_row() <= obs_prime.row)
-
-
-def count_obstacles_collision(s, s_prime, *is_obstacle_type):
-    count = [0] * len(is_obstacle_type)
-
-    for obs, obs_prime in zip(s.obstacles, s_prime.obstacles):
-        if obstacle_could_encounter_car(obs, obs_prime, s, s_prime):
-            for i, f in enumerate(is_obstacle_type):
-                if f(obs):
-                    count[i] += 1
-                    break
-    return count
-
-
-def drove_on_ditch(s_prime):
-    return (s_prime.col == 0 or s_prime.col == 3)
+                while len(info[i][j]) < len(state_indices):
+                    info[i][j].append([0.0] * 5)
+        return info, state_indices
