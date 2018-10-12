@@ -1,7 +1,7 @@
 from itertools import product, combinations
 import numpy as np
 from pycolab.rendering import Observation
-from collections import defaultdict
+from collections import defaultdict, UserDict
 from driving_gridworld.actions import ACTIONS
 from driving_gridworld.obstacles import Pedestrian, Bump
 
@@ -314,20 +314,11 @@ class Road(object):
     def obstacle_is_visible(self, obs):
         return not self.obstacle_outside_car_path(obs) and obs.row >= 0
 
-    class IndexMap(object):
-        def __init__(self):
-            self._map = {}
-
-        def __len__(self):
-            return len(self._map)
-
+    class IndexMap(UserDict):
         def __getitem__(self, item):
-            if item not in self._map:
-                self._map[item] = len(self)
-            return self._map[item]
-
-        def __str__(self):
-            return str(self._map)
+            if item not in self:
+                self.__setitem__(item, len(self))
+            return super().__getitem__(item)
 
     def tabulate(self, *reward_functions, print_every=None):
         transitions = []
