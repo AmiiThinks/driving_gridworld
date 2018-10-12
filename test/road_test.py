@@ -398,14 +398,15 @@ def test_tabulate_multiple_reward():
             assert sum(ta) == pytest.approx(1.0)
 
 
-def test_safety_counter():
+def test_safety_information():
     patient = Road(headlight_range=1, car=Car(2, 0), obstacles=[Bump(-1, -1)])
-    counter_list, state_indices = patient.safety_counter()
+    counts, state_indices = patient.safety_information()
 
-    counter_list = np.array(counter_list)
+    counts = np.array(counts)
 
-    assert len(counter_list.shape) == 3
+    assert len(counts.shape) == 4
 
-    assert counter_list.shape[0] == len(state_indices)
-    assert counter_list.shape[1] == len(ACTIONS)
-    assert counter_list.shape[2] == len(state_indices)
+    assert counts.shape[0] == len(state_indices)
+    assert counts.shape[1] == len(ACTIONS)
+    assert counts.shape[2] == len(state_indices)
+    assert counts.shape[3] == 5
