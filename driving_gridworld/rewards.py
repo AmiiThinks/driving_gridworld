@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from itertools import product
-from driving_gridworld.obstacles import Pedestrian
+from driving_gridworld.obstacles import Pedestrian, Bump
 
 DEFAULT_EPSILON = 1e-10
 
@@ -106,6 +106,9 @@ class SituationalReward(object):
                 return self.offroad_collision_reward(progress_made,
                                                      collision_obstacle_speed)
 
+    class PedestrianHit(RuntimeError):
+        pass
+
     def __call__(self, s, a, s_prime):
         distance = s.car.progress_toward_destination(a)
         car_ends_up_on_pavement = 1 <= s_prime.car.col <= 2
@@ -113,24 +116,23 @@ class SituationalReward(object):
         if s.has_crashed() or s_prime.has_crashed():
             return self.reward_for_critical_error
 
-        min_col = min(s.car.col, s_prime.car.col)
-        max_col = max(s.car.col, s_prime.car.col)
-
-        def obstacle_could_encounter_car(obs, obs_prime):
-            return (min_col <= obs_prime.col <= max_col
-                    and max(obs.row, 0) <= s.car_row() <= obs_prime.row)
-
         reward_without_collision = self.reward(distance,
                                                car_ends_up_on_pavement)
-        rewards_collided_obstacles = []
-        for obs, obs_prime in zip(s.obstacles, s_prime.obstacles):
-            if obstacle_could_encounter_car(obs, obs_prime):
-                if isinstance(obs, Pedestrian):
-                    return self.reward_for_critical_error
-                else:
-                    rewards_collided_obstacles.append(
-                        self.reward(distance, car_ends_up_on_pavement,
-                                    obs.speed) - reward_without_collision)
+
+        def check_for_pedestrian_collision(obs):
+            if isinstance(obs, Pedestrian): raise self.PedestrianHit()
+
+        def check_for_bump_collision(obs):
+            return ((self.reward(distance, car_ends_up_on_pavement, obs.speed)
+                     - reward_without_collision)
+                    if isinstance(obs, Bump) else None)
+
+        try:
+            rewards_collided_obstacles = s.count_obstacle_collisions(
+                s_prime, check_for_pedestrian_collision,
+                check_for_bump_collision)
+        except self.PedestrianHit:
+            return self.reward_for_critical_error
 
         return sum(rewards_collided_obstacles) + reward_without_collision
 
