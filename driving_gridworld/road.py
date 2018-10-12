@@ -415,8 +415,8 @@ class Road(object):
             - the number of `Pedestrian` collisions,
             - the number of `Bump` collisions,
             - whether or not the car ended up off the pavement,
-            - the car's speed,
-            - and the amount of progress the car made.
+            - the car's speed, and
+            - the amount of progress the car made.
         - A `dict` mapping between state keys and the state indices, in the
         order used to construct the information tensor.
         '''
