@@ -3,6 +3,7 @@ import numpy as np
 from pycolab.rendering import Observation
 from collections import defaultdict
 from driving_gridworld.actions import ACTIONS
+from driving_gridworld.obstacles import Pedestrian, Bump
 
 
 def _byte(c, encoding='ascii'):
@@ -243,8 +244,8 @@ class Road(object):
 
     def speedometer_layer(self):
         layer = np.full([self._num_rows(), self._stage_width], False)
-        layer[self.speed_limit() - self._car.speed:,
-              self._speedometer_col_idx] = True
+        layer[self.speed_limit() -
+              self._car.speed:, self._speedometer_col_idx] = True
         return layer
 
     def obstacle_layers(self):
@@ -383,3 +384,69 @@ class Road(object):
                     transitions[i][j].append(0.0)
 
         return transitions, rewards, state_indices
+
+    def safety_counter(self):
+        counter_list = []
+
+        visited = set()
+        state_indices = self.IndexMap()
+        to_be_visited = [(self, self.to_key())]
+
+        while to_be_visited:
+            s, s_key = to_be_visited.pop()
+
+            if s_key in visited:
+                continue  # we break out of loop? (in the first rum there is a single state in to_be_visited ??)
+            visited.add(s_key)
+            s_i = state_indices[s_key]
+
+            while len(counter_list) <= s_i:
+                counter_list.append([[] for _ in range(len(ACTIONS))])
+
+            for j, a in enumerate(ACTIONS):
+                for i, (s_prime, p) in enumerate(s.successors(a)):
+                    s_prime_key = s_prime.to_key()
+                    if s_prime_key not in visited:
+                        to_be_visited.append((s_prime, s_prime_key))
+
+                    s_prime_i = state_indices[s_prime_key]
+                    while len(counter_list[s_i][j]) <= s_prime_i:
+                        counter_list[s_i][j].append([0.0, 0.0, 0.0, 0.0, 0.0])
+
+                    tup = count_obstacles_collision(
+                        s, s_prime, lambda obs: isinstance(obs, Pedestrian),
+                        lambda obs: isinstance(obs, Bump))
+                    tup += [
+                        int(drove_on_ditch(s_prime)), s.car.speed,
+                        s.car.progress_toward_destination(a)
+                    ]
+                    counter_list[s_i][j][s_prime_i] = tup
+
+        for i in range(len(state_indices)):
+            for j in range(len(ACTIONS)):
+                while len(counter_list[i][j]) < len(state_indices):
+                    counter_list[i][j].append([0.0, 0.0, 0.0, 0.0, 0.0])
+        return counter_list, state_indices
+
+
+def obstacle_could_encounter_car(obs, obs_prime, s, s_prime):
+    min_col = min(s.car.col, s_prime.car.col)
+    max_col = max(s.car.col, s_prime.car.col)
+    return (min_col <= obs_prime.col <= max_col
+            and max(obs.row, 0) <= s.car_row() <= obs_prime.row)
+
+
+def count_obstacles_collision(s, s_prime, *is_obstacle_type):
+    count = [0] * len(is_obstacle_type)
+
+    for obs, obs_prime in zip(s.obstacles, s_prime.obstacles):
+        if obstacle_could_encounter_car(obs, obs_prime, s, s_prime):
+            for i, f in enumerate(is_obstacle_type):
+                if f(obs):
+                    count[i] += 1
+                    break
+    return count
+
+
+def drove_on_ditch(s_prime):
+    return (s_prime.col == 0 or s_prime.col == 3)
