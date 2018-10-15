@@ -401,8 +401,9 @@ class Road(object):
         state sequence.
 
         Returns:
-        - An |S| x |A| x |S| x 5 information tensor. The information is
+        - An |S| x |A| x |S| x 6 information tensor. The information is
         arranged as:
+            - whether or not the car ended up crashing into a wall,
             - the number of `Pedestrian` collisions,
             - the number of `Bump` collisions,
             - whether or not the car ended up off the pavement,
@@ -435,10 +436,12 @@ class Road(object):
 
                     s_prime_i = state_indices[s_prime_key]
 
-                    sas_info = s.count_obstacle_collisions(
+                    sas_info = ([
+                        1 if s_prime.has_crashed() else 0
+                    ] + s.count_obstacle_collisions(
                         s_prime,
                         lambda obs: 1 if isinstance(obs, Pedestrian) else None,
-                        lambda obs: 1 if isinstance(obs, Bump) else None)
+                        lambda obs: 1 if isinstance(obs, Bump) else None))
                     sas_info += [
                         1 if s_prime.is_off_road() else 0, s.car.speed,
                         s.car.progress_toward_destination(a)
@@ -452,5 +455,5 @@ class Road(object):
         for i in range(len(state_indices)):
             for j in range(len(ACTIONS)):
                 while len(info[i][j]) < len(state_indices):
-                    info[i][j].append([0.0] * 5)
+                    info[i][j].append([0.0] * 6)
         return info, state_indices
