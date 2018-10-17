@@ -2,7 +2,7 @@ from itertools import product, combinations
 import numpy as np
 from pycolab.rendering import Observation
 from collections import defaultdict, UserDict
-from driving_gridworld.actions import ACTIONS
+from driving_gridworld.actions import ACTIONS, NO_OP
 from driving_gridworld.obstacles import Pedestrian, Bump
 
 
@@ -53,7 +53,8 @@ class Road(object):
                  headlight_range,
                  car,
                  obstacles=[],
-                 allowed_obstacle_appearance_columns=None):
+                 allowed_obstacle_appearance_columns=None,
+                 allow_crashing=True):
         self._headlight_range = headlight_range
 
         if self.speed_limit() < car.speed:
@@ -70,7 +71,12 @@ class Road(object):
         assert len(allowed_obstacle_appearance_columns) == len(obstacles)
         self._allowed_obstacle_appearance_columns = allowed_obstacle_appearance_columns
 
+        self.allow_crashing = allow_crashing
         if self.has_crashed():
+            if not self.allow_crashing:
+                raise ValueError(
+                    'Car has crashed into column {} even though crashing should not be allowed.'.
+                    format(self._car.col))
             self._car.speed = 0
 
     @property
@@ -86,7 +92,8 @@ class Road(object):
                 and self._car == other._car
                 and self._obstacles == other._obstacles
                 and (self._allowed_obstacle_appearance_columns ==
-                     other._allowed_obstacle_appearance_columns))
+                     other._allowed_obstacle_appearance_columns)
+                and (self.allow_crashing == other.allow_crashing))
 
     def copy(self):
         return self.__class__(
@@ -94,7 +101,8 @@ class Road(object):
             self._car,
             self._obstacles,
             allowed_obstacle_appearance_columns=(
-                self._allowed_obstacle_appearance_columns))
+                self._allowed_obstacle_appearance_columns),
+            allow_crashing=self.allow_crashing)
 
     def car_row(self):
         return self._headlight_range
@@ -163,7 +171,10 @@ class Road(object):
         distance = self._car.progress_toward_destination(action)
         next_car = self._car.next(action, self.speed_limit())
         if self.has_crashed(next_car):
-            next_car.speed = 0
+            if self.allow_crashing:
+                next_car.speed = 0
+            else:
+                next_car = self._car.next(NO_OP, self.speed_limit())
 
         for revealed in self.every_combination_of_revealed_obstacles(distance):
             prob = 1.0
@@ -192,7 +203,8 @@ class Road(object):
                 next_car,
                 obstacles=next_obstacles,
                 allowed_obstacle_appearance_columns=(
-                    self._allowed_obstacle_appearance_columns))
+                    self._allowed_obstacle_appearance_columns),
+                allow_crashing=self.allow_crashing)
             yield next_road, prob
 
     def is_in_a_ditch(self, car=None):
