@@ -70,6 +70,9 @@ class Road(object):
         assert len(allowed_obstacle_appearance_columns) == len(obstacles)
         self._allowed_obstacle_appearance_columns = allowed_obstacle_appearance_columns
 
+        if self.has_crashed():
+            self._car.speed = 0
+
     @property
     def car(self):
         return self._car
@@ -191,6 +194,10 @@ class Road(object):
                 allowed_obstacle_appearance_columns=(
                     self._allowed_obstacle_appearance_columns))
             yield next_road, prob
+
+    def is_in_a_ditch(self, car=None):
+        if car is None: car = self._car
+        return car.col == 0 or car.col == self._max_lane_idx
 
     def is_off_road(self, car=None):
         if car is None: car = self._car
@@ -442,10 +449,10 @@ class Road(object):
                         s_prime,
                         lambda obs: 1 if isinstance(obs, Pedestrian) else None,
                         lambda obs: 1 if isinstance(obs, Bump) else None))
-                    sas_info += [
-                        1 if s_prime.is_off_road() else 0, s.car.speed,
-                        s.car.progress_toward_destination(a)
-                    ]
+                    sas_info += [(1 if (s.is_in_a_ditch()
+                                        or s_prime.is_in_a_ditch()) else 0),
+                                 s.car.speed,
+                                 s.car.progress_toward_destination(a)]
 
                     while len(info[s_i][j]) <= s_prime_i:
                         info[s_i][j].append([0.0] * len(sas_info))

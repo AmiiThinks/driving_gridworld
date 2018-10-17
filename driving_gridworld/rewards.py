@@ -34,9 +34,8 @@ class SituationalReward(object):
             return min_r
         else:
             return self.offroad_reward_between(
-                min_r,
-                self.pavement_collision_reward(progress_made, 0) - self.epsilon,
-                self.offroad_reward(progress_made - 1))
+                min_r, (self.pavement_collision_reward(progress_made, 0) -
+                        self.epsilon), self.offroad_reward(progress_made - 1))
 
     def pavement_collision_reward(self, progress_made,
                                   collision_obstacle_speed):
@@ -91,15 +90,15 @@ class SituationalReward(object):
 
     def reward(self,
                progress_made,
-               car_ends_up_on_pavement,
+               car_always_on_pavement,
                collision_obstacle_speed=None):
         if collision_obstacle_speed is None:
-            if car_ends_up_on_pavement:
+            if car_always_on_pavement:
                 return self.unobstructed_reward(progress_made)
             else:
                 return self.offroad_reward(progress_made)
         else:
-            if car_ends_up_on_pavement:
+            if car_always_on_pavement:
                 return self.pavement_collision_reward(progress_made,
                                                       collision_obstacle_speed)
             else:
@@ -110,21 +109,21 @@ class SituationalReward(object):
         pass
 
     def __call__(self, s, a, s_prime):
-        distance = s.car.progress_toward_destination(a)
-        car_ends_up_on_pavement = 1 <= s_prime.car.col <= 2
-
         if s.has_crashed() or s_prime.has_crashed():
             return self.reward_for_critical_error
 
+        distance = s.car.progress_toward_destination(a)
+        car_always_on_pavement = (not (s.is_in_a_ditch()
+                                       or s_prime.is_in_a_ditch()))
         reward_without_collision = self.reward(distance,
-                                               car_ends_up_on_pavement)
+                                               car_always_on_pavement)
 
         def check_for_pedestrian_collision(obs):
             if isinstance(obs, Pedestrian): raise self.PedestrianHit()
 
         def check_for_bump_collision(obs):
-            return ((self.reward(distance, car_ends_up_on_pavement, obs.speed)
-                     - reward_without_collision)
+            return ((self.reward(distance, car_always_on_pavement, obs.speed) -
+                     reward_without_collision)
                     if isinstance(obs, Bump) else None)
 
         try:
@@ -199,17 +198,17 @@ class CachedSituationalReward(SituationalReward):
         return self._h[progress_made][collision_obstacle_speed]
 
     def np(self, speed_limit):
-        for progress_made, car_ends_up_on_pavement, collision_obstacle_speed in product(
+        for progress_made, car_always_on_pavement, collision_obstacle_speed in product(
                 range(speed_limit + 1), [True, False], range(speed_limit)):
-            self.reward(progress_made, car_ends_up_on_pavement,
+            self.reward(progress_made, car_always_on_pavement,
                         collision_obstacle_speed)
         return (np.array(self._u), np.array(self._c), np.array(self._d),
                 np.array(self._h))
 
     def tf(self, speed_limit):
-        for progress_made, car_ends_up_on_pavement, collision_obstacle_speed in product(
+        for progress_made, car_always_on_pavement, collision_obstacle_speed in product(
                 range(speed_limit + 1), [True, False], range(speed_limit)):
-            self.reward(progress_made, car_ends_up_on_pavement,
+            self.reward(progress_made, car_always_on_pavement,
                         collision_obstacle_speed)
         return (tf.stack(self._u), tf.stack(self._c), tf.stack(self._d),
                 tf.stack(self._h))
@@ -349,9 +348,10 @@ def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
                 collided_obstacles_speed.append(obs.speed)
 
     distance = s.car.progress_toward_destination(a)
-    car_ends_up_on_pavement = 1 <= s_prime.car.col <= 2
+    car_always_on_pavement = (not (s.is_in_a_ditch()
+                                   or s_prime.is_in_a_ditch()))
 
-    if car_ends_up_on_pavement:
+    if car_always_on_pavement:
         without_collision = u[distance]
         with_collision = C[distance, :]
     else:

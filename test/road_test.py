@@ -291,6 +291,12 @@ def test_car_has_crashed(col):
     assert patient.has_crashed()
     assert patient.has_crashed(Car(col, 1))
     assert not patient.has_crashed(Car(0, 1))
+    assert patient.to_key() == (col, 0, frozenset())
+
+    for action in ACTIONS:
+        successors, probs = zip(*patient.successors(action))
+        assert [s.to_key() for s in successors] == [(col, 0, frozenset())]
+        assert sum(probs) == pytest.approx(1.0)
 
 
 def test_crashing_into_left_wall():
