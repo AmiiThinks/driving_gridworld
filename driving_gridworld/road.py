@@ -207,13 +207,13 @@ class Road(object):
                 allow_crashing=self.allow_crashing)
             yield next_road, prob
 
-    def is_in_a_ditch(self, car=None):
-        if car is None: car = self._car
-        return car.col == 0 or car.col == self._max_lane_idx
+    def is_in_a_ditch(self, o=None):
+        if o is None: o = self._car
+        return o.col == 0 or o.col == self._max_lane_idx
 
-    def is_off_road(self, car=None):
-        if car is None: car = self._car
-        return car.col <= 0 or car.col >= self._max_lane_idx
+    def is_off_road(self, o=None):
+        if o is None: o = self._car
+        return o.col <= 0 or o.col >= self._max_lane_idx
 
     def has_crashed(self, car=None):
         if car is None: car = self._car

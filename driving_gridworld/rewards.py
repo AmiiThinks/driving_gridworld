@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from itertools import product
 from driving_gridworld.obstacles import Pedestrian, Bump
+import sys
 
 DEFAULT_EPSILON = 1e-10
 
@@ -60,8 +61,14 @@ class SituationalReward(object):
                                                collision_obstacle_speed),
             )
 
-    def offroad_collision_reward(self, progress_made,
-                                 collision_obstacle_speed):
+    def offroad_collision_reward(self,
+                                 progress_made,
+                                 collision_obstacle_speed,
+                                 collision_obstacle_on_pavement=True):
+        if not collision_obstacle_on_pavement:
+            print(
+                'WARNING: Case where collision obstacle is off the pavement is not currently handled by `SituationalReward`.',
+                file=sys.stderr)
         if progress_made < 0:
             return np.inf
         elif collision_obstacle_speed < 0:
@@ -74,7 +81,8 @@ class SituationalReward(object):
                     self.pavement_collision_reward(progress_made,
                                                    collision_obstacle_speed),
                     self.offroad_collision_reward(progress_made,
-                                                  collision_obstacle_speed - 1)
+                                                  collision_obstacle_speed - 1,
+                                                  collision_obstacle_on_pavement)
                 ) - self.epsilon
             )  # yapf:disable
 
@@ -84,15 +92,18 @@ class SituationalReward(object):
                 min_r,
                 max_r,
                 self.offroad_collision_reward(progress_made,
-                                              collision_obstacle_speed - 1),
+                                              collision_obstacle_speed - 1,
+                                              collision_obstacle_on_pavement),
                 self.offroad_collision_reward(progress_made - 1,
-                                              collision_obstacle_speed),
+                                              collision_obstacle_speed,
+                                              collision_obstacle_on_pavement),
             )
 
     def reward(self,
                progress_made,
                car_always_on_pavement,
-               collision_obstacle_speed=None):
+               collision_obstacle_speed=None,
+               collision_obstacle_on_pavement=True):
         if collision_obstacle_speed is None:
             if car_always_on_pavement:
                 return self.unobstructed_reward(progress_made)
@@ -103,8 +114,9 @@ class SituationalReward(object):
                 return self.pavement_collision_reward(progress_made,
                                                       collision_obstacle_speed)
             else:
-                return self.offroad_collision_reward(progress_made,
-                                                     collision_obstacle_speed)
+                return self.offroad_collision_reward(
+                    progress_made, collision_obstacle_speed,
+                    collision_obstacle_on_pavement)
 
     class PedestrianHit(RuntimeError):
         pass
@@ -123,7 +135,8 @@ class SituationalReward(object):
             if isinstance(obs, Pedestrian): raise self.PedestrianHit()
 
         def check_for_bump_collision(obs):
-            return ((self.reward(distance, car_always_on_pavement, obs.speed) -
+            return ((self.reward(distance, car_always_on_pavement, obs.speed,
+                                 not s.is_in_a_ditch(obs)) -
                      reward_without_collision)
                     if isinstance(obs, Bump) else None)
 
@@ -184,15 +197,19 @@ class CachedSituationalReward(SituationalReward):
         return (len(self._h) > progress_made
                 and len(self._h[progress_made]) > collision_obstacle_speed)
 
-    def offroad_collision_reward(self, progress_made,
-                                 collision_obstacle_speed):
+    def offroad_collision_reward(self,
+                                 progress_made,
+                                 collision_obstacle_speed,
+                                 collision_obstacle_on_pavement=True):
         if progress_made < 0 or collision_obstacle_speed < 0:
-            return super().offroad_collision_reward(progress_made,
-                                                    collision_obstacle_speed)
+            return super().offroad_collision_reward(
+                progress_made, collision_obstacle_speed,
+                collision_obstacle_on_pavement)
         elif not self.offroad_collision_is_saved(progress_made,
                                                  collision_obstacle_speed):
-            h = super().offroad_collision_reward(progress_made,
-                                                 collision_obstacle_speed)
+            h = super().offroad_collision_reward(
+                progress_made, collision_obstacle_speed,
+                collision_obstacle_on_pavement)
             if len(self._h) <= progress_made:
                 self._h.append([])
             self._h[progress_made].append(h)
