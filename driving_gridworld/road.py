@@ -426,8 +426,9 @@ class Road(object):
             - the number of `Pedestrian` collisions,
             - the number of `Bump` collisions,
             - whether or not the car ended up off the pavement,
-            - the car's speed, and
-            - the amount of progress the car made.
+            - the car's speed,
+            - the amount of progress the car made, and
+            - the number of lanes the car moved across.
         - A `dict` mapping between state keys and the state indices, in the
         order used to construct the information tensor.
         '''
@@ -464,7 +465,8 @@ class Road(object):
                     sas_info += [(1 if (s.is_in_a_ditch()
                                         or s_prime.is_in_a_ditch()) else 0),
                                  s.car.speed,
-                                 s.car.progress_toward_destination(a)]
+                                 s.car.progress_toward_destination(a),
+                                 abs(s_prime.car.col - s.car.col)]
 
                     while len(info[s_i][j]) <= s_prime_i:
                         info[s_i][j].append([0.0] * len(sas_info))
@@ -474,5 +476,5 @@ class Road(object):
         for i in range(len(state_indices)):
             for j in range(len(ACTIONS)):
                 while len(info[i][j]) < len(state_indices):
-                    info[i][j].append([0.0] * 6)
+                    info[i][j].append([0.0] * 7)
         return info, state_indices

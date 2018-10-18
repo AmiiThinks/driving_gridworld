@@ -415,4 +415,4 @@ def test_safety_information():
     assert counts.shape[0] == len(state_indices)
     assert counts.shape[1] == len(ACTIONS)
     assert counts.shape[2] == len(state_indices)
-    assert counts.shape[3] == 6
+    assert counts.shape[3] == 7
