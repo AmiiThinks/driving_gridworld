@@ -420,7 +420,7 @@ class Road(object):
         state sequence.
 
         Returns:
-        - An |S| x |A| x |S| x 6 information tensor. The information is
+        - An |S| x |A| x |S| x 7 information tensor. The information is
         arranged as:
             - whether or not the car ended up crashing into a wall,
             - the number of `Pedestrian` collisions,
