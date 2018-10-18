@@ -34,8 +34,9 @@ class SituationalReward(object):
             return min_r
         else:
             return self.offroad_reward_between(
-                min_r, (self.pavement_collision_reward(progress_made, 0) -
-                        self.epsilon), self.offroad_reward(progress_made - 1))
+                min_r,
+                (self.unobstructed_reward(progress_made) - self.epsilon),
+                self.offroad_reward(progress_made - 1))
 
     def pavement_collision_reward(self, progress_made,
                                   collision_obstacle_speed):
