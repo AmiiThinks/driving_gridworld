@@ -416,3 +416,17 @@ def test_safety_information():
     assert counts.shape[1] == len(ACTIONS)
     assert counts.shape[2] == len(state_indices)
     assert counts.shape[3] == 7
+
+
+def test_collision():
+    s_p = Road(headlight_range=3, car=Car(2, 4), obstacles=[Bump(3, 2)])
+    s = Road(headlight_range=3, car=Car(2, 4), obstacles=[])
+
+    num_collisions = s.count_obstacle_collisions(s_p, lambda obs: 1 if isinstance(obs, Bump) else None)
+    print(num_collisions)
+
+    num_collisions = s_p.count_obstacle_collisions(s, lambda obs: 1 if isinstance(obs, Bump) else None)
+    print(num_collisions)
+
+    num_collisions = s_p.count_obstacle_collisions(s_p, lambda obs: 1 if isinstance(obs, Bump) else None)
+    print(num_collisions)
