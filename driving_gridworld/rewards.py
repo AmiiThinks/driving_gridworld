@@ -7,6 +7,10 @@ import sys
 DEFAULT_EPSILON = 1e-10
 
 
+class PedestrianHit(RuntimeError):
+    pass
+
+
 class SituationalReward(object):
     def __init__(self,
                  wc_non_critical_error_reward,
@@ -118,9 +122,6 @@ class SituationalReward(object):
                     progress_made, collision_obstacle_speed,
                     collision_obstacle_on_pavement)
 
-    class PedestrianHit(RuntimeError):
-        pass
-
     def __call__(self, s, a, s_prime):
         if s.has_crashed() or s_prime.has_crashed():
             return self.reward_for_critical_error
@@ -132,7 +133,7 @@ class SituationalReward(object):
                                                car_always_on_pavement)
 
         def check_for_pedestrian_collision(obs):
-            if isinstance(obs, Pedestrian): raise self.PedestrianHit()
+            if isinstance(obs, Pedestrian): raise PedestrianHit()
 
         def check_for_bump_collision(obs):
             return ((self.reward(distance, car_always_on_pavement, obs.speed,
@@ -144,7 +145,7 @@ class SituationalReward(object):
             rewards_collided_obstacles = s.count_obstacle_collisions(
                 s_prime, check_for_pedestrian_collision,
                 check_for_bump_collision)
-        except self.PedestrianHit:
+        except PedestrianHit:
             return self.reward_for_critical_error
 
         return sum(rewards_collided_obstacles) + reward_without_collision
@@ -350,20 +351,24 @@ def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
     if s.has_crashed() or s_prime.has_crashed():
         return reward_for_critical_error
 
-    min_col = min(s.car.col, s_prime.car.col)
-    max_col = max(s.car.col, s_prime.car.col)
+    def check_for_pedestrian_collision(obs=None):
+        if obs is None:
+            return []
+        elif isinstance(obs, Pedestrian):
+            raise PedestrianHit()
 
-    def obstacle_could_encounter_car(obs, obs_prime):
-        return (min_col <= obs_prime.col <= max_col
-                and max(obs.row, 0) <= s.car_row() <= obs_prime.row)
+    def check_for_bump_collision(obs=None):
+        if obs is None:
+            return []
+        else:
+            return [obs.speed] if isinstance(obs, Bump) else None
 
-    collided_obstacles_speed = []
-    for obs, obs_prime in zip(s.obstacles, s_prime.obstacles):
-        if obstacle_could_encounter_car(obs, obs_prime):
-            if isinstance(obs, Pedestrian):
-                return reward_for_critical_error
-            else:
-                collided_obstacles_speed.append(obs.speed)
+    try:
+        collided_obstacles_speed = s.count_obstacle_collisions(
+            s_prime, check_for_pedestrian_collision,
+            check_for_bump_collision)[-1]
+    except PedestrianHit:
+        return reward_for_critical_error
 
     distance = s.car.progress_toward_destination(a)
     car_always_on_pavement = (not (s.is_in_a_ditch()

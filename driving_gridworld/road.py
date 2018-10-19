@@ -396,7 +396,13 @@ class Road(object):
         return transitions, rewards, state_indices
 
     def count_obstacle_collisions(self, s_prime, *value_for_obs):
-        counts = [0] * len(value_for_obs)
+        def call_or_zero(v):
+            try:
+                return v()
+            except:
+                return 0
+
+        counts = [call_or_zero(v) for v in value_for_obs]
 
         if self.car.speed < 1: return counts
 
