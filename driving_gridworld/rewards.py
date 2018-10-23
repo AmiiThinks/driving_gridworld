@@ -19,27 +19,10 @@ class SituationalReward(object):
                  reward_for_critical_error=-10.0,
                  num_samples=1):
         self.num_samples = num_samples
-        self._wc_non_critical_error_reward = wc_non_critical_error_reward
-        self._stopping_reward = stopping_reward
+        self.wc_non_critical_error_reward = wc_non_critical_error_reward
+        self.stopping_reward = stopping_reward
         self.epsilon = epsilon
-        self._reward_for_critical_error = reward_for_critical_error
-
-    @property
-    def wc_non_critical_error_reward(self):
-        return (self._wc_non_critical_error_reward if self.num_samples < 2 else
-                np.full([self.num_samples],
-                        self._wc_non_critical_error_reward).astype('float32'))
-
-    @property
-    def stopping_reward(self):
-        return (self._stopping_reward if self.num_samples < 2 else np.full(
-            [self.num_samples], self._stopping_reward).astype('float32'))
-
-    @property
-    def reward_for_critical_error(self):
-        return (self._reward_for_critical_error if self.num_samples < 2 else
-                np.full([self.num_samples],
-                        self._reward_for_critical_error).astype('float32'))
+        self.reward_for_critical_error = reward_for_critical_error
 
     def unobstructed_reward(self, progress_made):
         if progress_made < 1:
