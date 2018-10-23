@@ -28,17 +28,18 @@ class SituationalReward(object):
     def wc_non_critical_error_reward(self):
         return (self._wc_non_critical_error_reward if self.num_samples < 2 else
                 np.full([self.num_samples],
-                        self._wc_non_critical_error_reward))
+                        self._wc_non_critical_error_reward).astype('float32'))
 
     @property
     def stopping_reward(self):
-        return (self._stopping_reward if self.num_samples < 2 else
-                np.full([self.num_samples], self._stopping_reward))
+        return (self._stopping_reward if self.num_samples < 2 else np.full(
+            [self.num_samples], self._stopping_reward).astype('float32'))
 
     @property
     def reward_for_critical_error(self):
         return (self._reward_for_critical_error if self.num_samples < 2 else
-                np.full([self.num_samples], self._reward_for_critical_error))
+                np.full([self.num_samples],
+                        self._reward_for_critical_error).astype('float32'))
 
     def unobstructed_reward(self, progress_made):
         if progress_made < 1:
@@ -65,7 +66,7 @@ class SituationalReward(object):
                                   collision_obstacle_speed):
         if progress_made < 0:
             return np.inf if self.num_samples < 2 else np.full(
-                [self.num_samples], np.inf)
+                [self.num_samples], np.inf).astype('float32')
         elif collision_obstacle_speed < 0:
             return self.unobstructed_reward(progress_made)
         else:
@@ -94,7 +95,7 @@ class SituationalReward(object):
                 file=sys.stderr)
         if progress_made < 0:
             return np.inf if self.num_samples < 2 else np.full(
-                [self.num_samples], np.inf)
+                [self.num_samples], np.inf).astype('float32')
         elif collision_obstacle_speed < 0:
             return self.offroad_reward(progress_made)
         else:

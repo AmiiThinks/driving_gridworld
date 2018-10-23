@@ -299,3 +299,23 @@ def test_best_worst_and_average_case_reward_parameters(new_reward_function):
         if j > 0:
             assert C[i, j - 1] > C[i, j]
             assert H[i, j - 1] > H[i, j]
+
+
+def test_two_samples_with_tf():
+    tf.set_random_seed(42)
+
+    stopping_reward = 0
+    sampled_exponentials = tf.distributions.Exponential(1.0).sample(2)
+    wc_non_critical_error_reward = -sampled_exponentials[0] + stopping_reward
+
+    patient = TfUniformSituationalReward(
+        wc_non_critical_error_reward=wc_non_critical_error_reward,
+        stopping_reward=stopping_reward,
+        reward_for_critical_error=wc_non_critical_error_reward - 1000.0,
+        max_unobstructed_progress_reward=sampled_exponentials[1] +
+        stopping_reward,
+        num_samples=2)
+    s = new_road(car_col=0)
+    rewards = patient(s, NO_OP, s).numpy()
+    assert rewards[0] == pytest.approx(0.5942526)
+    assert rewards[1] == pytest.approx(0.09948251)
