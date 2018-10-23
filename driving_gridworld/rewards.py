@@ -16,11 +16,29 @@ class SituationalReward(object):
                  wc_non_critical_error_reward,
                  stopping_reward,
                  epsilon=DEFAULT_EPSILON,
-                 reward_for_critical_error=-10.0):
-        self.wc_non_critical_error_reward = wc_non_critical_error_reward
-        self.stopping_reward = stopping_reward
+                 reward_for_critical_error=-10.0,
+                 num_samples=1):
+        self.num_samples = num_samples
+        self._wc_non_critical_error_reward = wc_non_critical_error_reward
+        self._stopping_reward = stopping_reward
         self.epsilon = epsilon
-        self.reward_for_critical_error = reward_for_critical_error
+        self._reward_for_critical_error = reward_for_critical_error
+
+    @property
+    def wc_non_critical_error_reward(self):
+        return (self._wc_non_critical_error_reward if self.num_samples < 2 else
+                np.full([self.num_samples],
+                        self._wc_non_critical_error_reward))
+
+    @property
+    def stopping_reward(self):
+        return (self._stopping_reward if self.num_samples < 2 else
+                np.full([self.num_samples], self._stopping_reward))
+
+    @property
+    def reward_for_critical_error(self):
+        return (self._reward_for_critical_error if self.num_samples < 2 else
+                np.full([self.num_samples], self._reward_for_critical_error))
 
     def unobstructed_reward(self, progress_made):
         if progress_made < 1:
@@ -46,7 +64,8 @@ class SituationalReward(object):
     def pavement_collision_reward(self, progress_made,
                                   collision_obstacle_speed):
         if progress_made < 0:
-            return np.inf
+            return np.inf if self.num_samples < 2 else np.full(
+                [self.num_samples], np.inf)
         elif collision_obstacle_speed < 0:
             return self.unobstructed_reward(progress_made)
         else:
@@ -74,7 +93,8 @@ class SituationalReward(object):
                 'WARNING: Case where collision obstacle is off the pavement is not currently handled by `SituationalReward`.',
                 file=sys.stderr)
         if progress_made < 0:
-            return np.inf
+            return np.inf if self.num_samples < 2 else np.full(
+                [self.num_samples], np.inf)
         elif collision_obstacle_speed < 0:
             return self.offroad_reward(progress_made)
         else:
@@ -262,16 +282,24 @@ class UniformSituationalReward(CachedSituationalReward):
         return self.pavement_collision_reward_between(
             min_r, max_r, less_obstacle_speed_reward, less_progress_reward)
 
-    def _random_uniform(self, minval=0, maxval=1, shape=[]):
+    def _random_uniform(self, minval=0, maxval=1):
+        if self.num_samples > 1:
+            shape = [self.num_samples]
+        else:
+            shape = []
         return np.random.uniform(low=minval, high=maxval, size=shape)
 
 
 class TfUniformSituationalReward(UniformSituationalReward):
-    def _random_uniform(self, minval=0, maxval=1, shape=[]):
+    def _random_uniform(self, minval=0, maxval=1):
+        if self.num_samples > 1:
+            shape = [self.num_samples]
+        else:
+            shape = []
         return tf.random_uniform(shape, minval=minval, maxval=maxval)
 
     def _min(self, *args):
-        return tf.reduce_min(args)
+        return tf.reduce_min(args, axis=0)
 
 
 class WcSituationalReward(CachedSituationalReward):
