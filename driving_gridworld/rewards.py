@@ -58,15 +58,18 @@ class _SituationalReward(object):
         else:
             min_bonus = ((
                 progress_made - collision_obstacle_speed) * self.epsilon)
-            bc_offroad_collision_reward = (self.pavement_collision_reward(
-                progress_made, collision_obstacle_speed - 1) - self.epsilon)
+
+            pcr_w_slower_obstacle = self.pavement_collision_reward(
+                progress_made, collision_obstacle_speed - 1)
+
+            bc_offroad_collision_reward = pcr_w_slower_obstacle - self.epsilon
             min_r = self._min(self.wc_non_critical_error_reward + min_bonus,
                               bc_offroad_collision_reward)
+
             return self.pavement_collision_reward_between(
                 min_r,
                 bc_offroad_collision_reward,
-                self.pavement_collision_reward(progress_made,
-                                               collision_obstacle_speed - 1),
+                pcr_w_slower_obstacle,
                 self.pavement_collision_reward(progress_made - 1,
                                                collision_obstacle_speed),
             )
@@ -87,13 +90,15 @@ class _SituationalReward(object):
         else:
             min_bonus = ((
                 progress_made - collision_obstacle_speed - 1) * self.epsilon)
+
+            ocr_w_slower_obstacle = self.offroad_collision_reward(
+                progress_made, collision_obstacle_speed - 1,
+                collision_obstacle_on_pavement)
             max_r = (
                 self._min(
                     self.pavement_collision_reward(progress_made,
                                                    collision_obstacle_speed),
-                    self.offroad_collision_reward(progress_made,
-                                                  collision_obstacle_speed - 1,
-                                                  collision_obstacle_on_pavement)
+                    ocr_w_slower_obstacle
                 ) - self.epsilon
             )  # yapf:disable
 
@@ -102,9 +107,7 @@ class _SituationalReward(object):
             return self.offroad_collision_reward_between(
                 min_r,
                 max_r,
-                self.offroad_collision_reward(progress_made,
-                                              collision_obstacle_speed - 1,
-                                              collision_obstacle_on_pavement),
+                ocr_w_slower_obstacle,
                 self.offroad_collision_reward(progress_made - 1,
                                               collision_obstacle_speed,
                                               collision_obstacle_on_pavement),
@@ -181,14 +184,12 @@ class _SituationalReward(object):
             min_r, max_r, less_obstacle_speed_reward, less_progress_reward)
 
     def _random_uniform(self, minval=0, maxval=1):
-        if self.num_samples > 1:
-            shape = [self.num_samples]
-        else:
-            shape = []
-        return np.random.uniform(low=minval, high=maxval, size=shape)
+        return np.squeeze(
+            np.random.uniform(
+                low=minval, high=maxval, size=[self.num_samples]))
 
     def _min(self, *args):
-        return min(args)
+        return np.min(args, axis=0) if self.num_samples > 1 else min(args)
 
 
 class SituationalReward(_SituationalReward):
@@ -272,11 +273,9 @@ class SituationalReward(_SituationalReward):
 
 class TfSituationalReward(SituationalReward):
     def _random_uniform(self, minval=0, maxval=1):
-        if self.num_samples > 1:
-            shape = [self.num_samples]
-        else:
-            shape = []
-        return tf.random_uniform(shape, minval=minval, maxval=maxval)
+        return tf.squeeze(
+            tf.random_uniform(
+                [self.num_samples], minval=minval, maxval=maxval))
 
     def _min(self, *args):
         return tf.reduce_min(args, axis=0)
