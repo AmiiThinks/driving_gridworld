@@ -2,10 +2,10 @@ import numpy as np
 import tensorflow as tf
 tf.enable_eager_execution()
 from driving_gridworld.rewards import \
-    UniformSituationalReward, \
-    TfUniformSituationalReward, \
+    SituationalReward, \
+    TfSituationalReward, \
     WcSituationalReward, \
-    BcUniformSituationalReward
+    BcSituationalReward
 from driving_gridworld.rewards import DeterministicReward
 from driving_gridworld.rewards import StochasticReward
 from driving_gridworld.rewards import sample_reward_parameters
@@ -108,8 +108,8 @@ def unshifted_average_case_determinstic_reward_function(
 
 all_situational_reward_function_constructors = list(map(
     lambda cls: lambda *args, **kwargs: situational_reward_function(cls, *args, **kwargs), [
-        UniformSituationalReward, TfUniformSituationalReward,
-        WcSituationalReward, BcUniformSituationalReward
+        SituationalReward, TfSituationalReward,
+        WcSituationalReward, BcSituationalReward
     ]
 ))
 
@@ -304,13 +304,13 @@ def test_best_worst_and_average_case_reward_parameters(new_reward_function):
 def test_two_samples_with_tf():
     tf.set_random_seed(42)
 
-    patient = TfUniformSituationalReward(
+    patient = TfSituationalReward(
         wc_non_critical_error_reward=-np.ones([2]),
         stopping_reward=np.zeros([2]),
         reward_for_critical_error=np.full([2], -1000.0),
-        max_unobstructed_progress_reward=np.ones([2]),
+        bc_unobstructed_progress_reward=np.ones([2]),
         num_samples=2)
     s = new_road(car_col=0)
     rewards = patient(s, NO_OP, s).numpy()
-    assert rewards[0] == pytest.approx(0.7536838)
-    assert rewards[1] == pytest.approx(-0.37372702)
+    assert rewards[0] == pytest.approx(2.8096604)
+    assert rewards[1] == pytest.approx(0.20558453)
