@@ -13,17 +13,17 @@ class PedestrianHit(RuntimeError):
 
 class _SituationalReward(object):
     def __init__(self,
-                 wc_non_critical_error_reward,
-                 stopping_reward,
+                 wc_non_critical_error_reward=-1.0,
+                 stopping_reward=0,
                  epsilon=DEFAULT_EPSILON,
-                 reward_for_critical_error=-10.0,
+                 critical_error_reward=-10.0,
                  bc_unobstructed_progress_reward=1.0,
                  num_samples=1):
         self.num_samples = num_samples
         self.wc_non_critical_error_reward = wc_non_critical_error_reward
         self.stopping_reward = stopping_reward
         self.epsilon = epsilon
-        self.reward_for_critical_error = reward_for_critical_error
+        self.critical_error_reward = critical_error_reward
         self.bc_unobstructed_progress_reward = bc_unobstructed_progress_reward
 
     def unobstructed_reward(self, progress_made):
@@ -131,7 +131,7 @@ class _SituationalReward(object):
 
     def __call__(self, s, a, s_prime):
         if s.has_crashed() or s_prime.has_crashed():
-            return self.reward_for_critical_error
+            return self.critical_error_reward
 
         distance = s.car.progress_toward_destination(a)
         car_always_on_pavement = (not (s.is_in_a_ditch()
@@ -153,7 +153,7 @@ class _SituationalReward(object):
                 s_prime, check_for_pedestrian_collision,
                 check_for_bump_collision)
         except PedestrianHit:
-            return self.reward_for_critical_error
+            return self.critical_error_reward
 
         return sum(rewards_collided_obstacles) + reward_without_collision
 
@@ -355,9 +355,9 @@ def best_case_reward_parameters(speed_limit, epsilon=DEFAULT_EPSILON):
         epsilon=epsilon).np(speed_limit)
 
 
-def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
+def r(u, C, d, H, critical_error_reward, s, a, s_prime):
     if s.has_crashed() or s_prime.has_crashed():
-        return reward_for_critical_error
+        return critical_error_reward
 
     def check_for_pedestrian_collision(obs=None):
         if obs is None:
@@ -376,7 +376,7 @@ def r(u, C, d, H, reward_for_critical_error, s, a, s_prime):
             s_prime, check_for_pedestrian_collision,
             check_for_bump_collision)[-1]
     except PedestrianHit:
-        return reward_for_critical_error
+        return critical_error_reward
 
     distance = s.car.progress_toward_destination(a)
     car_always_on_pavement = (not (s.is_in_a_ditch()
@@ -424,18 +424,18 @@ class DeterministicReward(object):
     def average_reward_unshifted(cls, speed_limit, **kwargs):
         return cls(*average_reward_parameters(speed_limit), **kwargs, bias=0.0)
 
-    def __init__(self, u, C, d, H, bias=None, reward_for_critical_error=-1.0):
+    def __init__(self, u, C, d, H, bias=None, critical_error_reward=-1.0):
         if bias is None:
             bias = sample_reward_bias()
         self.u = u + bias
         self.c = C + bias
         self.d = d + bias
         self.h = H + bias
-        self.reward_for_critical_error = reward_for_critical_error + bias
+        self.critical_error_reward = critical_error_reward + bias
 
     def __call__(self, s, a, s_p):
-        reward = r(self.u, self.c, self.d, self.h,
-                   self.reward_for_critical_error, s, a, s_p)
+        reward = r(self.u, self.c, self.d, self.h, self.critical_error_reward,
+                   s, a, s_p)
         return reward
 
 
@@ -444,17 +444,17 @@ class StochasticReward(object):
     def unshifted(cls, *args, **kwargs):
         return cls(*args, **kwargs, bias=0.0)
 
-    def __init__(self, bias=None, reward_for_critical_error=-1.0):
+    def __init__(self, bias=None, critical_error_reward=-1.0):
         if bias is None:
             bias = sample_reward_bias()
         self.bias = bias
-        self.reward_for_critical_error = reward_for_critical_error + bias
+        self.critical_error_reward = critical_error_reward + bias
 
     def __call__(self, s, a, s_p):
         params = [
             v + self.bias for v in sample_reward_parameters(s.speed_limit())
         ]
-        reward = r(*params, self.reward_for_critical_error, s, a, s_p)
+        reward = r(*params, self.critical_error_reward, s, a, s_p)
         return reward
 
 

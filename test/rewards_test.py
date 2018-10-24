@@ -54,11 +54,11 @@ def test_sample_reward_parameters(seed):
             assert H[i, j - 1] > H[i, j]
 
 
-def situational_reward_function(cls, reward_for_critical_error=-1):
+def situational_reward_function(cls, critical_error_reward=-1):
     return cls(
         wc_non_critical_error_reward(),
         stopping_reward(),
-        reward_for_critical_error=reward_for_critical_error)
+        critical_error_reward=critical_error_reward)
 
 
 def determinstic_reward_function():
@@ -66,44 +66,38 @@ def determinstic_reward_function():
         *sample_reward_parameters(headlight_range() + 1))
 
 
-def unshifted_determinstic_reward_function(reward_for_critical_error=-1.0):
+def unshifted_determinstic_reward_function(critical_error_reward=-1.0):
     return DeterministicReward.unshifted(
         *sample_reward_parameters(headlight_range() + 1),
-        reward_for_critical_error=reward_for_critical_error)
+        critical_error_reward=critical_error_reward)
 
 
-def sample_determinstic_reward_function(reward_for_critical_error=-1.0):
+def sample_determinstic_reward_function(critical_error_reward=-1.0):
     return DeterministicReward.sample(
-        headlight_range() + 1,
-        reward_for_critical_error=reward_for_critical_error)
+        headlight_range() + 1, critical_error_reward=critical_error_reward)
 
 
-def sample_unshifted_determinstic_reward_function(
-        reward_for_critical_error=-1.0):
+def sample_unshifted_determinstic_reward_function(critical_error_reward=-1.0):
     return DeterministicReward.sample_unshifted(
-        headlight_range() + 1,
-        reward_for_critical_error=reward_for_critical_error)
+        headlight_range() + 1, critical_error_reward=critical_error_reward)
 
 
 def unshifted_worst_case_determinstic_reward_function(
-        reward_for_critical_error=-1.0):
+        critical_error_reward=-1.0):
     return DeterministicReward.worst_case_reward_unshifted(
-        headlight_range() + 1,
-        reward_for_critical_error=reward_for_critical_error)
+        headlight_range() + 1, critical_error_reward=critical_error_reward)
 
 
 def unshifted_best_case_determinstic_reward_function(
-        reward_for_critical_error=-1.0):
+        critical_error_reward=-1.0):
     return DeterministicReward.best_case_reward_unshifted(
-        headlight_range() + 1,
-        reward_for_critical_error=reward_for_critical_error)
+        headlight_range() + 1, critical_error_reward=critical_error_reward)
 
 
 def unshifted_average_case_determinstic_reward_function(
-        reward_for_critical_error=-1.0):
+        critical_error_reward=-1.0):
     return DeterministicReward.average_reward_unshifted(
-        headlight_range() + 1,
-        reward_for_critical_error=reward_for_critical_error)
+        headlight_range() + 1, critical_error_reward=critical_error_reward)
 
 
 all_situational_reward_function_constructors = list(map(
@@ -198,7 +192,7 @@ def test_reward_is_minimal_when_car_hits_moving_pedestrian(
     s = new_road(Pedestrian(-1, 1, speed=0))
     sp = new_road(Pedestrian(headlight_range(), 1, speed=0))
 
-    assert patient(s, NO_OP, sp) == patient.reward_for_critical_error
+    assert patient(s, NO_OP, sp) == patient.critical_error_reward
 
 
 @pytest.mark.parametrize("columns", [(0, -1), (3, 4)])
@@ -216,8 +210,8 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
     assert not s.has_crashed()
     assert sp.has_crashed()
 
-    assert patient(s, action, sp) == patient.reward_for_critical_error
-    assert patient(sp, action, sp) == patient.reward_for_critical_error
+    assert patient(s, action, sp) == patient.critical_error_reward
+    assert patient(sp, action, sp) == patient.critical_error_reward
 
 
 @pytest.mark.parametrize(
@@ -227,7 +221,7 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
 def test_unshifted_reward_function(new_reward_function):
     np.random.seed(42)
     patient = new_reward_function()
-    assert patient.reward_for_critical_error == -1.0
+    assert patient.critical_error_reward == -1.0
 
 
 @pytest.mark.parametrize(
@@ -236,11 +230,11 @@ def test_unshifted_reward_function(new_reward_function):
     all_situational_reward_function_constructors)
 @pytest.mark.parametrize("critical_reward",
                          [float(i) for i in range(-1, -11, -1)])
-def test_unshifted_reward_fuction_with_variable_reward_for_critical_error(
+def test_unshifted_reward_fuction_with_variable_critical_error_reward(
         new_reward_function, critical_reward):
     np.random.seed(42)
-    patient = new_reward_function(reward_for_critical_error=critical_reward)
-    assert patient.reward_for_critical_error == critical_reward
+    patient = new_reward_function(critical_error_reward=critical_reward)
+    assert patient.critical_error_reward == critical_reward
 
 
 @pytest.mark.parametrize("critical_reward",
@@ -248,8 +242,8 @@ def test_unshifted_reward_fuction_with_variable_reward_for_critical_error(
 def test_sampled_unshifted_reward_fuction(critical_reward):
     np.random.seed(42)
     patient = sample_unshifted_determinstic_reward_function(
-        reward_for_critical_error=critical_reward)
-    bias = patient.reward_for_critical_error - critical_reward
+        critical_error_reward=critical_reward)
+    bias = patient.critical_error_reward - critical_reward
     assert bias == 0.0
 
 
@@ -260,8 +254,8 @@ def test_sampled_unshifted_reward_fuction(critical_reward):
 def test_min_reward_function(columns, action, critical_reward):
     np.random.seed(42)
     patient = unshifted_worst_case_determinstic_reward_function(
-        reward_for_critical_error=critical_reward)
-    bias = patient.reward_for_critical_error - critical_reward
+        critical_error_reward=critical_reward)
+    bias = patient.critical_error_reward - critical_reward
     assert bias == 0.0
 
     s = new_road(car_col=columns[0])
@@ -270,8 +264,8 @@ def test_min_reward_function(columns, action, critical_reward):
     assert not s.has_crashed()
     assert sp.has_crashed()
 
-    assert patient(s, action, sp) == patient.reward_for_critical_error
-    assert patient(sp, action, sp) == patient.reward_for_critical_error
+    assert patient(s, action, sp) == patient.critical_error_reward
+    assert patient(sp, action, sp) == patient.critical_error_reward
 
 
 @pytest.mark.parametrize("new_reward_function", [
@@ -307,7 +301,7 @@ def test_two_samples_with_tf():
     patient = TfSituationalReward(
         wc_non_critical_error_reward=-np.ones([2]),
         stopping_reward=np.zeros([2]),
-        reward_for_critical_error=np.full([2], -1000.0),
+        critical_error_reward=np.full([2], -1000.0),
         bc_unobstructed_progress_reward=np.ones([2]),
         num_samples=2)
     s = new_road(car_col=0)
