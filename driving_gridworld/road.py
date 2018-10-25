@@ -10,10 +10,6 @@ def _byte(c, encoding='ascii'):
     return bytes(c, encoding)[0]
 
 
-def product_combination_pairs(a, b, n):
-    return product(product(a, repeat=n), combinations(b, n))
-
-
 class Successor(object):
     def __init__(self, state=None, prob=0.0):
         self.state = state
@@ -135,22 +131,36 @@ class Road(object):
         return True
 
     def every_combination_of_revealed_obstacles(self, distance):
-        hidden_obstacle_indices = [
-            i for i in range(len(self._obstacles))
-            if self.obstacle_outside_car_path(self._obstacles[i])
-        ]
+        yield {}
 
-        for num_newly_visible_obstacles in range(len(hidden_obstacle_indices) + 1):  # yapf:disable
-            for positions, group in (
-                product_combination_pairs(
-                    self.available_spaces(distance),
-                    hidden_obstacle_indices,
-                    num_newly_visible_obstacles
-                )
-            ):  # yapf:disable
-                revealed = dict(zip(group, positions))
-                if self.is_valid_configuration(revealed):
-                    yield revealed
+        hidden_obstacles = []
+        for i, o in enumerate(self._obstacles):
+            if self.obstacle_outside_car_path(o):
+                spaces = [
+                    (row, col)
+                    for row, col in self.available_spaces(distance + o.speed)
+                    if col in self._allowed_obstacle_appearance_columns[i]
+                ]
+                if len(spaces) > 0:
+                    hidden_obstacles.append((i, spaces))
+
+        for num_reveal in range(1, len(hidden_obstacles) + 1):
+            for allocation in set(
+                    combinations(range(len(hidden_obstacles)), num_reveal)):
+                obstacles_to_reveal = [
+                    o for i, o in enumerate(hidden_obstacles)
+                    if i in allocation
+                ]
+                range_of_spaces = [
+                    range(len(spaces)) for _, spaces in obstacles_to_reveal
+                ]
+
+                for positioning in product(*range_of_spaces):
+                    yield {
+                        o: spaces[space_idx]
+                        for (o, spaces), space_idx in zip(
+                            obstacles_to_reveal, positioning)
+                    }
 
     def successors(self, action):
         '''Generates successor, probability tuples.
@@ -183,19 +193,20 @@ class Road(object):
             for i in range(len(self._obstacles)):
                 obs = self._obstacles[i]
                 p = self.prob_obstacle_appears(obs, distance)
-                assert 0 <= p <= 1
+                obs_distance_rt_car = distance + obs.speed
 
                 obs_is_revealed = i in revealed
                 if obs_is_revealed:
                     next_obstacle = obs.copy_at_position(*revealed[i])
                     prob_not_appearing_closer = ((1.0 - p)**(
-                        distance - next_obstacle.row - 1))
+                        obs_distance_rt_car - next_obstacle.row - 1))
+
                     prob_appearing_in_row = p * prob_not_appearing_closer
                     prob *= prob_appearing_in_row / float(
                         len(self._allowed_obstacle_appearance_columns[i]))
                 else:
                     next_obstacle = obs.next(distance)
-                    prob *= (1.0 - p)**distance
+                    prob *= (1.0 - p)**(obs_distance_rt_car)
                 next_obstacles.append(next_obstacle)
 
             next_road = self.__class__(
@@ -240,11 +251,9 @@ class Road(object):
         return s[:-1]
 
     def prob_obstacle_appears(self, obstacle, distance):
-        an_obstacle_could_appear = distance > 0
-        this_obstacle_could_appear = (an_obstacle_could_appear and
+        this_obstacle_could_appear = ((distance + obstacle.speed) > 0 and
                                       self.obstacle_outside_car_path(obstacle))
-        return (obstacle.prob_of_appearing
-                if this_obstacle_could_appear else 0)
+        return int(this_obstacle_could_appear) * obstacle.prob_of_appearing
 
     def car_layer(self):
         layer = np.full([self._num_rows(), self._stage_width], False)
@@ -326,8 +335,7 @@ class Road(object):
         cumulative_p = 0.0
         for s, p in self.successors(a):
             cumulative_p += p
-            if cumulative_p > v:
-                return s
+            if cumulative_p > v: return s
         return s
 
     def obstacle_is_visible(self, obs):
@@ -464,17 +472,18 @@ class Road(object):
 
                     s_prime_i = state_indices[s_prime_key]
 
-                    sas_info = ([
-                        1 if s_prime.has_crashed() else 0
-                    ] + s.count_obstacle_collisions(
+                    collision_counts = s.count_obstacle_collisions(
                         s_prime,
                         lambda obs: 1 if isinstance(obs, Pedestrian) else None,
-                        lambda obs: 1 if isinstance(obs, Bump) else None))
-                    sas_info += [(1 if (s.is_in_a_ditch()
-                                        or s_prime.is_in_a_ditch()) else 0),
-                                 s.car.speed,
-                                 s.car.progress_toward_destination(a),
-                                 abs(s_prime.car.col - s.car.col)]
+                        lambda obs: 1 if isinstance(obs, Bump) else None)
+
+                    sas_info = [int(s_prime.has_crashed())] + collision_counts
+                    sas_info += [
+                        int(s.is_in_a_ditch() or s_prime.is_in_a_ditch()),
+                        s.car.speed,
+                        s.car.progress_toward_destination(a),
+                        abs(s_prime.car.col - s.car.col)
+                    ]
 
                     while len(info[s_i][j]) <= s_prime_i:
                         info[s_i][j].append([0.0] * len(sas_info))

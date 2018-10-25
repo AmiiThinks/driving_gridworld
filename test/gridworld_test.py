@@ -107,10 +107,10 @@ def test_obstacles_always_appear_with_the_same_probability():
         (frozenset([('p', 0, 0, 0, 0)]), 0.0025),
         (frozenset([('p', 0, 2, 0, 0)]), 0.0025)
     ]  # yapf:disable
-    all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))
-    for s, prob in successors:
-        x_obstacles, x_prob = all_x.pop()
+    assert len(successors) == len(all_x)
+    for i, (s, prob) in enumerate(successors):
+        x_obstacles, x_prob = all_x[i]
         assert s.to_key()[-1] == x_obstacles
         assert prob == x_prob
 
@@ -122,17 +122,9 @@ def test_obstacles_always_appear_with_the_same_probability():
     patient.play(NO_OP)
     assert patient.road.to_s() == '|d  d| \n|d  d| \n|d  d| \n|d  d| \n|d Cd|^'
 
-    all_x = [
-        (frozenset(), 0.99),
-        (frozenset([('p', 0, 1, 0, 0)]), 0.0025),
-        (frozenset([('p', 0, 3, 0, 0)]), 0.0025),
-        (frozenset([('p', 0, 0, 0, 0)]), 0.0025),
-        (frozenset([('p', 0, 2, 0, 0)]), 0.0025)
-    ]  # yapf:disable
-    all_x.reverse()
     successors = tuple(patient.road.successors(NO_OP))
-    for s, prob in successors:
-        x_obstacles, x_prob = all_x.pop()
+    for i, (s, prob) in enumerate(successors):
+        x_obstacles, x_prob = all_x[i]
         assert s.to_key()[-1] == x_obstacles
         assert prob == x_prob
 

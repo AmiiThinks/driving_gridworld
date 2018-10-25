@@ -1,5 +1,5 @@
 import numpy as np
-from driving_gridworld.road import Road, product_combination_pairs
+from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
@@ -338,11 +338,6 @@ def test_probabilities_error():
     assert sum(probs) == pytest.approx(1.0)
 
 
-def test_permutations():
-    patient = product_combination_pairs([(0, i) for i in range(4)], [0, 1], 2)
-    assert len(list(patient)) == 16
-
-
 def test_successor_function_with_identical_states():
     expected_probs = [
         0.64, 0.08, 0.08, 0.08, 0.08, 0.0025, 0.005, 0.005, 0.005, 0.0025,
@@ -431,3 +426,15 @@ def test_collisions():
     num_collisions = s_p.count_obstacle_collisions(
         s, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
     assert num_collisions == 0
+
+
+def test_moving_car_appears_when_stopped():
+    s = Road(
+        headlight_range=3,
+        car=Car(2, 0),
+        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.5)],
+        allowed_obstacle_appearance_columns=[{1}])
+    successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
+    assert len(successors) == 2
+    assert successors[0] == ((2, 0, frozenset()), 0.5)
+    assert successors[1] == ((2, 0, frozenset([('p', 0, 1, 1, 0)])), 0.5)
