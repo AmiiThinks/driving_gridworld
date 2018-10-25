@@ -29,13 +29,12 @@ class _SituationalReward(object):
     def unobstructed_reward(self, progress_made):
         if progress_made < 1:
             return self.stopping_reward
+        elif progress_made < 2:
+            return (self.unobstructed_reward_between(
+                self.stopping_reward, self.bc_unobstructed_progress_reward) +
+                    self.epsilon)
         else:
-            return (
-                self.unobstructed_reward_between(
-                    self.unobstructed_reward(progress_made - 1) + self.epsilon,
-                    progress_made * self.bc_unobstructed_progress_reward
-                )
-            )  # yapf:disable
+            return progress_made * self.unobstructed_reward(1)
 
     def offroad_reward(self, progress_made):
         min_r = (
@@ -201,8 +200,8 @@ class SituationalReward(_SituationalReward):
         self._h = [[]]
 
     def unobstructed_reward(self, progress_made):
-        if len(self._u) <= progress_made:
-            self._u.append(super().unobstructed_reward(progress_made))
+        while len(self._u) <= progress_made:
+            self._u.append(super().unobstructed_reward(len(self._u)))
         return self._u[progress_made]
 
     def pavement_collision_is_saved(self, progress_made,

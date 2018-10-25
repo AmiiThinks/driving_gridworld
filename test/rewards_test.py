@@ -34,52 +34,11 @@ def new_road(*obstacles, speed=headlight_range(), car_col=1):
     return Road(headlight_range(), Car(car_col, speed=speed), obstacles)
 
 
-@pytest.mark.parametrize("seed", range(100))
-def test_sample_reward_parameters(seed):
-    np.random.seed(seed)
-    u, C, d, H = sample_reward_parameters(headlight_range() + 1)
-
-    assert len(u) == headlight_range() + 2 == len(d)
-    assert C.shape == (headlight_range() + 2, headlight_range() + 1) == H.shape
-
-    rows = range(0, headlight_range() + 2)
-    colums = range(0, headlight_range() + 1)
-    for i, j in product(rows, colums):
-        assert u[i] > d[i]
-        assert d[i] > H[i, j]
-        assert u[i] > C[i, j]
-        assert C[i, j] > H[i, j]
-        if j > 0:
-            assert C[i, j - 1] > C[i, j]
-            assert H[i, j - 1] > H[i, j]
-
-
 def situational_reward_function(cls, critical_error_reward=-1):
     return cls(
         wc_non_critical_error_reward(),
         stopping_reward(),
         critical_error_reward=critical_error_reward)
-
-
-def determinstic_reward_function():
-    return DeterministicReward(
-        *sample_reward_parameters(headlight_range() + 1))
-
-
-def unshifted_determinstic_reward_function(critical_error_reward=-1.0):
-    return DeterministicReward.unshifted(
-        *sample_reward_parameters(headlight_range() + 1),
-        critical_error_reward=critical_error_reward)
-
-
-def sample_determinstic_reward_function(critical_error_reward=-1.0):
-    return DeterministicReward.sample(
-        headlight_range() + 1, critical_error_reward=critical_error_reward)
-
-
-def sample_unshifted_determinstic_reward_function(critical_error_reward=-1.0):
-    return DeterministicReward.sample_unshifted(
-        headlight_range() + 1, critical_error_reward=critical_error_reward)
 
 
 def unshifted_worst_case_determinstic_reward_function(
@@ -109,7 +68,6 @@ all_situational_reward_function_constructors = list(map(
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward] +
                          all_situational_reward_function_constructors)
 def test_collision_is_worse_than_no_collision(new_reward_function):
     np.random.seed(42)
@@ -127,7 +85,6 @@ def test_collision_is_worse_than_no_collision(new_reward_function):
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward] +
                          all_situational_reward_function_constructors)
 def test_collision_with_faster_obstacle_is_worse_than_one_with_a_slower_obstacle(
         new_reward_function):
@@ -146,7 +103,6 @@ def test_collision_with_faster_obstacle_is_worse_than_one_with_a_slower_obstacle
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward] +
                          all_situational_reward_function_constructors)
 def test_more_collisions_are_worse(new_reward_function):
     np.random.seed(42)
@@ -164,7 +120,6 @@ def test_more_collisions_are_worse(new_reward_function):
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward] +
                          all_situational_reward_function_constructors)
 def test_driving_faster_with_no_obstacles_gives_larger_reward(
         new_reward_function):
@@ -182,7 +137,6 @@ def test_driving_faster_with_no_obstacles_gives_larger_reward(
 
 
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward] +
                          all_situational_reward_function_constructors)
 def test_reward_is_minimal_when_car_hits_moving_pedestrian(
         new_reward_function):
@@ -197,7 +151,6 @@ def test_reward_is_minimal_when_car_hits_moving_pedestrian(
 
 @pytest.mark.parametrize("columns", [(0, -1), (3, 4)])
 @pytest.mark.parametrize("new_reward_function",
-                         [determinstic_reward_function, StochasticReward] +
                          all_situational_reward_function_constructors)
 @pytest.mark.parametrize("action", ACTIONS)
 def test_crashing_into_a_wall(columns, new_reward_function, action):
@@ -212,39 +165,6 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
 
     assert patient(s, action, sp) == patient.critical_error_reward
     assert patient(sp, action, sp) == patient.critical_error_reward
-
-
-@pytest.mark.parametrize(
-    "new_reward_function",
-    [unshifted_determinstic_reward_function, StochasticReward.unshifted] +
-    all_situational_reward_function_constructors)
-def test_unshifted_reward_function(new_reward_function):
-    np.random.seed(42)
-    patient = new_reward_function()
-    assert patient.critical_error_reward == -1.0
-
-
-@pytest.mark.parametrize(
-    "new_reward_function",
-    [unshifted_determinstic_reward_function, StochasticReward.unshifted] +
-    all_situational_reward_function_constructors)
-@pytest.mark.parametrize("critical_reward",
-                         [float(i) for i in range(-1, -11, -1)])
-def test_unshifted_reward_fuction_with_variable_critical_error_reward(
-        new_reward_function, critical_reward):
-    np.random.seed(42)
-    patient = new_reward_function(critical_error_reward=critical_reward)
-    assert patient.critical_error_reward == critical_reward
-
-
-@pytest.mark.parametrize("critical_reward",
-                         [float(i) for i in range(-1, -11, -1)])
-def test_sampled_unshifted_reward_fuction(critical_reward):
-    np.random.seed(42)
-    patient = sample_unshifted_determinstic_reward_function(
-        critical_error_reward=critical_reward)
-    bias = patient.critical_error_reward - critical_reward
-    assert bias == 0.0
 
 
 @pytest.mark.parametrize("columns", [(0, -1), (3, 4)])
@@ -306,5 +226,5 @@ def test_two_samples_with_tf():
         num_samples=2)
     s = new_road(car_col=0)
     rewards = patient(s, NO_OP, s).numpy()
-    assert rewards[0] == pytest.approx(2.8096604)
-    assert rewards[1] == pytest.approx(0.20558453)
+    assert rewards[0] == pytest.approx(1.1475897)
+    assert rewards[1] == pytest.approx(0.9217568)
