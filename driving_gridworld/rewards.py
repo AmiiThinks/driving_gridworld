@@ -119,12 +119,12 @@ class _SituationalReward(object):
         return self._random_uniform(min_r, max_r)
 
     def _random_uniform(self, minval=0, maxval=1):
-        return np.squeeze(
-            np.random.uniform(
-                low=minval, high=maxval, size=[self.num_samples]))
+        return tf.squeeze(
+            tf.random_uniform(
+                [self.num_samples], minval=minval, maxval=maxval))
 
     def _min(self, *args):
-        return np.min(args, axis=0) if self.num_samples > 1 else min(args)
+        return tf.reduce_min(args, axis=0)
 
 
 class SituationalReward(_SituationalReward):
@@ -176,16 +176,6 @@ class SituationalReward(_SituationalReward):
                 tf.stack(self._offroad_bonuses))
 
 
-class TfSituationalReward(SituationalReward):
-    def _random_uniform(self, minval=0, maxval=1):
-        return tf.squeeze(
-            tf.random_uniform(
-                [self.num_samples], minval=minval, maxval=maxval))
-
-    def _min(self, *args):
-        return tf.reduce_min(args, axis=0)
-
-
 class WcSituationalReward(SituationalReward):
     def __init__(self, *args, epsilon=1e-10, **kwargs):
         super().__init__(*args, epsilon=epsilon, **kwargs)
@@ -204,8 +194,8 @@ class BcSituationalReward(SituationalReward):
     def __init__(self, *args, epsilon=1e-10, **kwargs):
         super().__init__(*args, epsilon=epsilon, **kwargs)
 
-    def progress_bonus_between(self, min_reward, max_reward):
-        return max(min_reward, max_reward)
+    def progress_bonus_between(self, min_r, max_r):
+        return max_r
 
     def offroad_bonus_between(self, min_r, max_r):
         return max_r
@@ -214,7 +204,7 @@ class BcSituationalReward(SituationalReward):
         return max_r
 
 
-class ComponentAvgSituationalReward(TfSituationalReward):
+class ComponentAvgSituationalReward(SituationalReward):
     def progress_bonus_between(self, min_r, max_r):
         return (max_r + min_r) / 2.0
 
@@ -225,7 +215,7 @@ class ComponentAvgSituationalReward(TfSituationalReward):
         return (max_r + min_r) / 2.0
 
 
-class SampleAvgSituationalReward(TfSituationalReward):
+class SampleAvgSituationalReward(SituationalReward):
     def progress_bonus(self):
         return tf.reduce_mean(super().progress_bonus())
 

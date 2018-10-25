@@ -3,7 +3,6 @@ import tensorflow as tf
 tf.enable_eager_execution()
 from driving_gridworld.rewards import \
     SituationalReward, \
-    TfSituationalReward, \
     WcSituationalReward, \
     BcSituationalReward
 from driving_gridworld.road import Road
@@ -39,7 +38,7 @@ def situational_reward_function(cls, critical_error_reward=-1):
 
 all_situational_reward_function_constructors = list(map(
     lambda cls: lambda *args, **kwargs: situational_reward_function(cls, *args, **kwargs), [
-        SituationalReward, TfSituationalReward,
+        SituationalReward,
         WcSituationalReward, BcSituationalReward
     ]
 ))
@@ -148,7 +147,7 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
 def test_two_samples_with_tf():
     tf.set_random_seed(42)
 
-    patient = TfSituationalReward(
+    patient = SituationalReward(
         wc_non_critical_error_reward=-np.ones([2]).astype('float32'),
         stopping_reward=np.zeros([2]).astype('float32'),
         critical_error_reward=np.full([2], -1000.0).astype('float32'),
