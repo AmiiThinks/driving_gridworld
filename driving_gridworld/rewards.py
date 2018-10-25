@@ -37,10 +37,9 @@ class _SituationalReward(object):
         if speed < 0:
             return self.stopping_reward
         else:
-            bc_bonus = self.offroad_bonus(speed - 1) - self.epsilon
-            min_r = self._min(self.wc_non_critical_error_reward -
-                              (speed + 1) * self.epsilon, bc_bonus)
-            return self.offroad_bonus_between(min_r, bc_bonus)
+            sub_bonus = self.offroad_bonus_between(
+                self.wc_non_critical_error_reward, self.stopping_reward)
+            return self.offroad_bonus(speed - 1) + sub_bonus - self.epsilon
 
     def offroad_reward(self, progress_made, speed):
         return (self.unobstructed_reward(progress_made) +
@@ -50,12 +49,9 @@ class _SituationalReward(object):
         if speed < 0:
             return self.stopping_reward
         else:
-            bc_bonus = self.collision_bonus(speed - 1) - self.epsilon
-            min_r = self._min(
-                self.wc_non_critical_error_reward - speed * self.epsilon,
-                bc_bonus)
-
-            return self.collision_bonus_between(min_r, bc_bonus)
+            sub_bonus = self.collision_bonus_between(
+                self.wc_non_critical_error_reward, self.stopping_reward)
+            return self.collision_bonus(speed - 1) + sub_bonus - self.epsilon
 
     def pavement_collision_reward(self, progress_made, speed,
                                   collision_obstacle_speed):

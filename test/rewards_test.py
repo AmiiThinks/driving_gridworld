@@ -156,5 +156,5 @@ def test_two_samples_with_tf():
         num_samples=2)
     s = new_road(car_col=0)
     rewards = patient(s, NO_OP, s).numpy()
-    assert rewards[0] == pytest.approx(1.9488049)
-    assert rewards[1] == pytest.approx(0.7648918)
+    assert rewards[0] == pytest.approx(1.5892127)
+    assert rewards[1] == pytest.approx(-1.26898)
