@@ -31,7 +31,8 @@ class _SituationalReward(object):
         if progress_made < 1:
             return self.stopping_reward
         else:
-            return progress_made * (self.progress_bonus() + self.epsilon)
+            return (self.stopping_reward + progress_made *
+                    (self.progress_bonus() + self.epsilon))
 
     def offroad_bonus(self, speed):
         if speed < 0:
