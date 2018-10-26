@@ -12,47 +12,43 @@ class _SituationalReward(object):
     def __init__(self,
                  wc_non_critical_error_reward=-1.0,
                  stopping_reward=0,
-                 epsilon=0,
                  critical_error_reward=-10.0,
                  bc_unobstructed_progress_reward=1.0,
                  num_samples=1):
         self.num_samples = num_samples
         self.wc_non_critical_error_reward = wc_non_critical_error_reward
         self.stopping_reward = stopping_reward
-        self.epsilon = epsilon
         self.critical_error_reward = critical_error_reward
         self.bc_unobstructed_progress_reward = bc_unobstructed_progress_reward
 
     def progress_bonus(self):
-        return self.progress_bonus_between(
-            self.stopping_reward, self.bc_unobstructed_progress_reward)
+        return self.progress_bonus_below(self.bc_unobstructed_progress_reward)
 
     def unobstructed_reward(self, progress_made):
         if progress_made < 1:
             return self.stopping_reward
         else:
-            return (self.stopping_reward + progress_made *
-                    (self.progress_bonus() + self.epsilon))
+            return self.stopping_reward + progress_made * self.progress_bonus()
 
     def offroad_bonus(self, speed):
         if speed < 0:
-            return self.stopping_reward
+            return 0
         else:
-            sub_bonus = self.offroad_bonus_between(
-                self.wc_non_critical_error_reward, self.stopping_reward)
-            return self.offroad_bonus(speed - 1) + sub_bonus - self.epsilon
+            sub_bonus = self.offroad_bonus_above(
+                self.wc_non_critical_error_reward)
+            return self.offroad_bonus(speed - 1) + sub_bonus
 
     def offroad_reward(self, progress_made, speed):
         return (self.unobstructed_reward(progress_made) +
-                self.offroad_bonus(speed))
+                self.offroad_bonus(speed) * max(0, speed))
 
     def collision_bonus(self, speed):
         if speed < 0:
-            return self.stopping_reward
+            return 0
         else:
-            sub_bonus = self.collision_bonus_between(
-                self.wc_non_critical_error_reward, self.stopping_reward)
-            return self.collision_bonus(speed - 1) + sub_bonus - self.epsilon
+            sub_bonus = self.collision_bonus_above(
+                self.wc_non_critical_error_reward)
+            return self.collision_bonus(speed - 1) + sub_bonus
 
     def pavement_collision_reward(self, progress_made, speed,
                                   collision_obstacle_speed):
@@ -63,7 +59,7 @@ class _SituationalReward(object):
                                  collision_obstacle_speed):
         return (self.pavement_collision_reward(progress_made, speed,
                                                collision_obstacle_speed) +
-                self.offroad_bonus(speed))
+                self.offroad_bonus(speed) * max(0, speed))
 
     def reward(self,
                progress_made,
@@ -110,22 +106,19 @@ class _SituationalReward(object):
 
         return sum(rewards_collided_obstacles) + reward_without_collision
 
-    def progress_bonus_between(self, min_reward, max_reward):
-        return self._random_uniform(min_reward, max_reward)
-
-    def offroad_bonus_between(self, min_r, max_r):
-        return self._random_uniform(min_r, max_r)
-
-    def collision_bonus_between(self, min_r, max_r):
-        return self._random_uniform(min_r, max_r)
-
-    def _random_uniform(self, minval=0, maxval=1):
+    def progress_bonus_below(self, bc_bonus):
         return tf.squeeze(
-            tf.random_uniform(
-                [self.num_samples], minval=minval, maxval=maxval))
+            tf.random_uniform([self.num_samples], minval=0, maxval=bc_bonus))
 
-    def _min(self, *args):
-        return tf.reduce_min(args, axis=0)
+    def offroad_bonus_above(self, wc_bonus):
+        return self.obstruction_bonus_above(wc_bonus)
+
+    def collision_bonus_above(self, wc_bonus):
+        return self.obstruction_bonus_above(wc_bonus)
+
+    def obstruction_bonus_above(self, wc_bonus):
+        return tf.squeeze(
+            tf.random_uniform([self.num_samples], minval=wc_bonus, maxval=0))
 
 
 class SituationalReward(_SituationalReward):
@@ -177,43 +170,34 @@ class SituationalReward(_SituationalReward):
                 tf.stack(self._offroad_bonuses))
 
 
-class WcSituationalReward(SituationalReward):
+class ExtremeSituationalReward(SituationalReward):
     def __init__(self, *args, epsilon=1e-10, **kwargs):
-        super().__init__(*args, epsilon=epsilon, **kwargs)
-
-    def progress_bonus_between(self, min_reward, _):
-        return min_reward
-
-    def offroad_bonus_between(self, min_r, max_r):
-        return min_r
-
-    def collision_bonus_between(self, min_r, max_r):
-        return min_r
+        super().__init__(*args, **kwargs)
+        self.epsilon = epsilon
 
 
-class BcSituationalReward(SituationalReward):
-    def __init__(self, *args, epsilon=1e-10, **kwargs):
-        super().__init__(*args, epsilon=epsilon, **kwargs)
+class WcSituationalReward(ExtremeSituationalReward):
+    def progress_bonus_below(self, bc_bonus):
+        return 0 + self.epsilon
 
-    def progress_bonus_between(self, min_r, max_r):
-        return max_r
+    def obstruction_bonus_above(self, wc_bonus):
+        return wc_bonus + self.epsilon
 
-    def offroad_bonus_between(self, min_r, max_r):
-        return max_r
 
-    def collision_bonus_between(self, min_r, max_r):
-        return max_r
+class BcSituationalReward(ExtremeSituationalReward):
+    def progress_bonus_below(self, bc_bonus):
+        return bc_bonus - self.epsilon
+
+    def obstruction_bonus_above(self, _):
+        return 0 - self.epsilon
 
 
 class ComponentAvgSituationalReward(SituationalReward):
-    def progress_bonus_between(self, min_r, max_r):
-        return (max_r + min_r) / 2.0
+    def progress_bonus_below(self, bc_bonus):
+        return bc_bonus / 2.0
 
-    def offroad_bonus_between(self, min_r, max_r):
-        return (max_r + min_r) / 2.0
-
-    def collision_bonus_between(self, min_r, max_r):
-        return (max_r + min_r) / 2.0
+    def obstruction_bonus_above(self, wc_bonus):
+        return wc_bonus / 2.0
 
 
 class SampleAvgSituationalReward(SituationalReward):
