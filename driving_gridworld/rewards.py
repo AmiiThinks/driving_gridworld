@@ -40,15 +40,12 @@ class _SituationalReward(object):
                 self.wc_non_critical_error_reward)
             return self.collision_bonus(speed - 1) + sub_bonus
 
-    def reward(self,
-               progress_made,
-               speed,
-               car_always_on_pavement,
-               collision_obstacle_speed=None):
+    def reward(self, progress_made, speed, car_always_on_pavement,
+               *collision_obstacle_speeds):
         r = (self.stopping_reward +
              max(0, progress_made) * self.progress_bonus())
-        if collision_obstacle_speed is not None:
-            r += self.collision_bonus(speed + collision_obstacle_speed)
+        for cob in collision_obstacle_speeds:
+            r += self.collision_bonus(speed + cob)
         if not car_always_on_pavement and speed > 0:
             r += speed * self.offroad_bonus(speed)
         return r
@@ -60,25 +57,23 @@ class _SituationalReward(object):
         distance = s.car.progress_toward_destination(a)
         car_always_on_pavement = (not (s.is_in_a_ditch()
                                        or s_prime.is_in_a_ditch()))
-        reward_without_collision = self.reward(distance, s.car.speed,
-                                               car_always_on_pavement)
 
         def check_for_pedestrian_collision(obs):
             if isinstance(obs, Pedestrian): raise PedestrianHit()
 
-        def check_for_bump_collision(obs):
-            return ((self.reward(distance, s.car.speed, car_always_on_pavement,
-                                 obs.speed) - reward_without_collision)
-                    if isinstance(obs, Bump) else None)
+        def check_for_bump_collision(obs=None):
+            if obs is None:
+                return []
+            else:
+                return [obs.speed] if isinstance(obs, Bump) else None
 
         try:
-            rewards_collided_obstacles = s.count_obstacle_collisions(
-                s_prime, check_for_pedestrian_collision,
-                check_for_bump_collision)
+            return self.reward(distance, s.car.speed, car_always_on_pavement,
+                               *s.count_obstacle_collisions(
+                                   s_prime, check_for_bump_collision,
+                                   check_for_pedestrian_collision)[0])
         except PedestrianHit:
             return self.critical_error_reward
-
-        return sum(rewards_collided_obstacles) + reward_without_collision
 
     def progress_bonus_below(self, bc_bonus):
         return tf.squeeze(
