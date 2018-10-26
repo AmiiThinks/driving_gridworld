@@ -24,23 +24,13 @@ class _SituationalReward(object):
     def progress_bonus(self):
         return self.progress_bonus_below(self.bc_unobstructed_progress_reward)
 
-    def unobstructed_reward(self, progress_made):
-        if progress_made < 1:
-            return self.stopping_reward
-        else:
-            return self.stopping_reward + progress_made * self.progress_bonus()
-
     def offroad_bonus(self, speed):
-        if speed < 0:
+        if speed < 1:
             return 0
         else:
             sub_bonus = self.offroad_bonus_above(
                 self.wc_non_critical_error_reward)
             return self.offroad_bonus(speed - 1) + sub_bonus
-
-    def offroad_reward(self, progress_made, speed):
-        return (self.unobstructed_reward(progress_made) +
-                self.offroad_bonus(speed) * max(0, speed))
 
     def collision_bonus(self, speed):
         if speed < 0:
@@ -50,34 +40,18 @@ class _SituationalReward(object):
                 self.wc_non_critical_error_reward)
             return self.collision_bonus(speed - 1) + sub_bonus
 
-    def pavement_collision_reward(self, progress_made, speed,
-                                  collision_obstacle_speed):
-        return (self.unobstructed_reward(progress_made) +
-                self.collision_bonus(speed + collision_obstacle_speed))
-
-    def offroad_collision_reward(self, progress_made, speed,
-                                 collision_obstacle_speed):
-        return (self.pavement_collision_reward(progress_made, speed,
-                                               collision_obstacle_speed) +
-                self.offroad_bonus(speed) * max(0, speed))
-
     def reward(self,
                progress_made,
                speed,
                car_always_on_pavement,
                collision_obstacle_speed=None):
-        if collision_obstacle_speed is None:
-            if car_always_on_pavement:
-                return self.unobstructed_reward(progress_made)
-            else:
-                return self.offroad_reward(progress_made, speed)
-        else:
-            if car_always_on_pavement:
-                return self.pavement_collision_reward(progress_made, speed,
-                                                      collision_obstacle_speed)
-            else:
-                return self.offroad_collision_reward(progress_made, speed,
-                                                     collision_obstacle_speed)
+        r = (self.stopping_reward +
+             max(0, progress_made) * self.progress_bonus())
+        if collision_obstacle_speed is not None:
+            r += self.collision_bonus(speed + collision_obstacle_speed)
+        if not car_always_on_pavement and speed > 0:
+            r += speed * self.offroad_bonus(speed)
+        return r
 
     def __call__(self, s, a, s_prime):
         if s.has_crashed() or s_prime.has_crashed():
