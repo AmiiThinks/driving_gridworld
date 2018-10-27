@@ -413,12 +413,42 @@ def test_safety_information():
     assert counts.shape[3] == 7
 
 
-def test_collisions():
+def test_simple_collision():
     hr = 3
     car = Car(2, 4)
     s = Road(headlight_range=hr, car=car, obstacles=[Bump(-1, -1)])
     s_p = Road(headlight_range=hr, car=car, obstacles=[Bump(hr, 2)])
 
+    num_collisions = s.count_obstacle_collisions(
+        s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+    assert num_collisions == 1
+
+
+def test_no_collision_if_obstacle_is_removed_from_the_road():
+    hr = 3
+    car = Car(2, 4)
+    s_p = Road(headlight_range=hr, car=car, obstacles=[Bump(-1, -1)])
+    s = Road(headlight_range=hr, car=car, obstacles=[Bump(hr, 2)])
+
+    num_collisions = s.count_obstacle_collisions(
+        s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+    assert num_collisions == 0
+
+
+def test_no_collision_if_obstacle_is_under_car():
+    hr = 3
+    car = Car(2, 4)
+    s = Road(headlight_range=hr, car=car, obstacles=[Bump(hr, 2)])
+    s_p = Road(headlight_range=hr, car=car, obstacles=[Bump(hr + 1, 2)])
+    num_collisions = s.count_obstacle_collisions(
+        s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+    assert num_collisions == 0
+
+
+def test_collision_if_car_changes_lanes_into_obstacle():
+    hr = 3
+    s = Road(headlight_range=hr, car=Car(2, 1), obstacles=[Bump(hr, 1)])
+    s_p = Road(headlight_range=hr, car=Car(1, 1), obstacles=[Bump(hr, 1)])
     num_collisions = s.count_obstacle_collisions(
         s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
     assert num_collisions == 1

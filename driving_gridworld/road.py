@@ -417,12 +417,16 @@ class Road(object):
         min_col = min(self.car.col, s_prime.car.col)
         max_col = max(self.car.col, s_prime.car.col)
 
-        def obstacle_could_encounter_car(obs, obs_prime):
-            return (min_col <= obs_prime.col <= max_col
+        def obstacle_in_column_range(obs):
+            return min_col <= obs_prime.col <= max_col
+
+        def car_could_collide_with_obstacle(obs, obs_prime):
+            return (not (obs.row == self.car_row() and obs.col == self.car.col)
+                    and obstacle_in_column_range(obs_prime)
                     and max(obs.row, 0) <= self.car_row() <= obs_prime.row)
 
         for obs, obs_prime in zip(self.obstacles, s_prime.obstacles):
-            if obstacle_could_encounter_car(obs, obs_prime):
+            if car_could_collide_with_obstacle(obs, obs_prime):
                 for i, v in enumerate(value_for_obs):
                     value = v(obs)
                     if value is not None:
