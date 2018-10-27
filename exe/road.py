@@ -8,13 +8,17 @@ Keys: left, right - move. up, down - speed up or down, respectively. q - quit.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import tensorflow as tf
+tf.enable_eager_execution()
 
 import fire
 import numpy as np
 import pickle
 
-from driving_gridworld.rewards import DeterministicReward
-from driving_gridworld.rewards import sample_reward_parameters
+from driving_gridworld.road import Road
+from driving_gridworld.car import Car
+from driving_gridworld.obstacles import Pedestrian, Bump
+from driving_gridworld.rewards import ComponentAvgSituationalReward
 
 
 def save(data, path):
@@ -22,53 +26,55 @@ def save(data, path):
         pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def main(headlight_range=5,
-         num_bumps=3,
-         num_pedestrians=3,
-         speed=1,
+def main(headlight_range=3,
          num_steps=100,
          ui=False,
          recording_path=None,
-         discount=0.99,
-         bump_prob=0.2,
-         pedestrian_prob=0.2):
+         discount=0.99):
     np.random.seed(42)
 
     headlight_range = int(headlight_range)
-    num_bumps = int(num_bumps)
-    num_pedestrians = int(num_pedestrians)
-    speed = int(speed)
     num_steps = int(num_steps)
     ui = bool(ui)
+
+    def new_road():
+        return Road(
+            headlight_range,
+            Car(2, 0),
+            obstacles=[
+                Bump(-1, -1, prob_of_appearing=0.2),
+                Pedestrian(-1, -1, speed=1, prob_of_appearing=0.2)
+            ],
+            allowed_obstacle_appearance_columns=[{2}, {1}],
+            allow_crashing=True)
+
+    speed_limit = headlight_range + 1
+    wc_non_critical_error_reward = -1.0 / speed_limit
+
+    reward_function = ComponentAvgSituationalReward(
+        wc_non_critical_error_reward=wc_non_critical_error_reward,
+        stopping_reward=0,
+        critical_error_reward=((speed_limit * speed_limit + speed_limit) *
+                               wc_non_critical_error_reward - 1000.0),
+        bc_unobstructed_progress_reward=1.0 / speed_limit)
 
     if ui:
         from driving_gridworld.human_ui import UiRecordingDrivingGridworld
 
-        game = UiRecordingDrivingGridworld.legacy_constructor(
-            headlight_range,
-            num_bumps,
-            num_pedestrians,
-            speed,
+        game = UiRecordingDrivingGridworld(
+            new_road,
             discount=discount,
-            bump_appearance_prob=bump_prob,
-            pedestrian_appearance_prob=pedestrian_prob,
-            reward_function=DeterministicReward(
-                *sample_reward_parameters(headlight_range + 1)))
-
+            reward_function=lambda s, a, sp: tf.convert_to_tensor(reward_function(s, a, sp)).numpy()
+        )
         game.ui_play()
     else:
         from driving_gridworld.gridworld import RecordingDrivingGridworld
 
-        game = RecordingDrivingGridworld.legacy_constructor(
-            headlight_range,
-            num_bumps,
-            num_pedestrians,
-            speed,
+        game = RecordingDrivingGridworld(
+            new_road,
             discount=discount,
-            bump_appearance_prob=bump_prob,
-            pedestrian_appearance_prob=pedestrian_prob,
-            reward_function=DeterministicReward(
-                *sample_reward_parameters(headlight_range + 1)))
+            reward_function=lambda s, a, sp: tf.convert_to_tensor(reward_function(s, a, sp)).numpy()
+        )
 
         observation, _, __ = game.its_showtime()
 
