@@ -25,7 +25,7 @@ class _SituationalReward(object):
         return self.progress_bonus_below(self.bc_unobstructed_progress_reward)
 
     def offroad_bonus(self, speed):
-        if speed < 1:
+        if speed < 0:
             return 0
         else:
             sub_bonus = self.offroad_bonus_above(
