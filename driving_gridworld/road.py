@@ -135,7 +135,7 @@ class Road(object):
 
         hidden_obstacles = []
         for i, o in enumerate(self._obstacles):
-            if self.obstacle_outside_car_path(o):
+            if o.prob_of_appearing > 0 and self.obstacle_outside_car_path(o):
                 spaces = [
                     (row, col)
                     for row, col in self.available_spaces(distance + o.speed)
@@ -145,12 +145,8 @@ class Road(object):
                     hidden_obstacles.append((i, spaces))
 
         for num_reveal in range(1, len(hidden_obstacles) + 1):
-            for allocation in set(
-                    combinations(range(len(hidden_obstacles)), num_reveal)):
-                obstacles_to_reveal = [
-                    o for i, o in enumerate(hidden_obstacles)
-                    if i in allocation
-                ]
+            for allocation in combinations(range(len(hidden_obstacles)), num_reveal):
+                obstacles_to_reveal = [hidden_obstacles[i] for i in allocation]
                 range_of_spaces = [
                     range(len(spaces)) for _, spaces in obstacles_to_reveal
                 ]
@@ -411,8 +407,6 @@ class Road(object):
                 return 0
 
         counts = [call_or_zero(v) for v in value_for_obs]
-
-        if self.car.speed < 1: return counts
 
         min_col = min(self.car.col, s_prime.car.col)
         max_col = max(self.car.col, s_prime.car.col)

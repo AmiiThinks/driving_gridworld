@@ -1,3 +1,4 @@
+from itertools import product
 import numpy as np
 from driving_gridworld.road import Road
 from driving_gridworld.obstacles import Bump
@@ -468,3 +469,33 @@ def test_moving_car_appears_when_stopped():
     assert len(successors) == 2
     assert successors[0] == ((2, 0, frozenset()), 0.5)
     assert successors[1] == ((2, 0, frozenset([('p', 0, 1, 1, 0)])), 0.5)
+
+
+def test_available_spaces():
+    s = Road(headlight_range=3, car=Car(2, 0))
+    assert s.available_spaces(2) == set(product(range(2), range(4)))
+
+
+def test_prob_of_moving_car_appearing():
+    s = Road(
+        headlight_range=3,
+        car=Car(2, 0),
+        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.05)],
+        allowed_obstacle_appearance_columns=[{1}])
+    successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
+    assert len(successors) == 2
+    assert successors[0] == ((2, 0, frozenset()), 0.95)
+    assert successors[1] == ((2, 0, frozenset([('p', 0, 1, 1, 0)])), 0.05)
+
+    s = Road(
+        headlight_range=3,
+        car=Car(2, 1),
+        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.05)],
+        allowed_obstacle_appearance_columns=[{1}])
+    successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
+    assert len(successors) == 3
+    assert successors[0] == ((2, 1, frozenset()),
+                             1 - (0.05 * (1 - 0.05) + 0.05))
+    assert successors[1] == ((2, 1, frozenset([('p', 0, 1, 1, 0)])),
+                             0.05 * (1 - 0.05))
+    assert successors[2] == ((2, 1, frozenset([('p', 1, 1, 1, 0)])), 0.05)
