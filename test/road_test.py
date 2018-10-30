@@ -339,20 +339,24 @@ def test_probabilities_error():
     assert sum(probs) == pytest.approx(1.0)
 
 
-def test_successor_function_with_identical_states():
+@pytest.mark.parametrize('p', [0.1 * i for i in range(1, 11)])
+def test_successor_function_with_identical_states(p):
     expected_probs = [
-        0.64, 0.08, 0.08, 0.08, 0.08, 0.0025, 0.005, 0.005, 0.005, 0.0025,
-        0.005, 0.005, 0.0025, 0.005, 0.0025
+        (1 - p)**2
+    ] + [2 * p * (1 - p) / 4] * 4 + [2 * p / 3.0 * p / 4.0] * 6
+    expected_probs = [
+        pytest.approx(prob) for prob in expected_probs if prob > 0
     ]
     state = Road(
         headlight_range=3,
         car=Car(1, 1),
-        obstacles=[Bump(-1, -1), Bump(-1, -1)])
+        obstacles=[
+            Bump(-1, -1, prob_of_appearing=p),
+            Bump(-1, -1, prob_of_appearing=p)
+        ])
     probs = [p for (s, p) in state.successors(NO_OP)]
     assert sum(probs) == pytest.approx(1.0)
-    assert len(probs) == len(expected_probs)
-    for i in range(len(probs)):
-        assert probs[i] == pytest.approx(expected_probs[i])
+    assert probs == expected_probs
 
 
 def test_tabulate_single_reward():
@@ -509,10 +513,14 @@ def test_obstacle_appearance_prob(p):
         obstacles=[Bump(-1, -1, prob_of_appearing=p)],
         allowed_obstacle_appearance_columns=[{1}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
-    assert len(successors) == 2
 
-    assert successors[0] == ((2, 1, frozenset()), 1.0 - p)
-    assert successors[1] == ((2, 1, frozenset([('b', 0, 1, 0, 0)])), p)
+    if p < 1:
+        assert len(successors) == 2
+        assert successors[0] == ((2, 1, frozenset()), 1.0 - p)
+    else:
+        assert len(successors) == 1
+    assert successors[int(p < 1) * 1] == ((2, 1, frozenset([('b', 0, 1, 0,
+                                                             0)])), p)
 
     s = Road(
         headlight_range=3,
@@ -523,15 +531,71 @@ def test_obstacle_appearance_prob(p):
         ],
         allowed_obstacle_appearance_columns=[{1}, {2}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
-    assert len(successors) == 4
 
-    assert successors[1] == ((2, 1, frozenset([('b', 0, 1, 0, 0)])),
-                             pytest.approx(p * (1 - p)))
-    assert successors[2] == ((2, 1, frozenset([('p', 0, 2, 0, 0)])),
-                             pytest.approx(p * (1 - p)))
-    assert successors[3] == ((2, 1,
-                              frozenset([('b', 0, 1, 0, 0), ('p', 0, 2, 0,
-                                                             0)])),
-                             pytest.approx(p * p))
+    if p < 1:
+        assert len(successors) == 4
+
+        assert successors[1] == ((2, 1, frozenset([('b', 0, 1, 0, 0)])),
+                                 pytest.approx(p * (1 - p)))
+        assert successors[2] == ((2, 1, frozenset([('p', 0, 2, 0, 0)])),
+                                 pytest.approx(p * (1 - p)))
+        assert successors[0] == ((2, 1, frozenset()),
+                                 pytest.approx(1 - 2 * p * (1 - p) - p * p))
+    else:
+        assert len(successors) == 1
+    assert successors[int(p < 1) * 3] == ((2, 1,
+                                           frozenset([('b', 0, 1, 0, 0),
+                                                      ('p', 0, 2, 0, 0)])),
+                                          pytest.approx(p * p))
+
+
+@pytest.mark.parametrize('p', [0.1 * i for i in range(1, 11)])
+def test_obstacles_cannot_appear_in_the_same_position(p):
+    s = Road(
+        headlight_range=3,
+        car=Car(2, 1),
+        obstacles=[
+            Bump(-1, -1, prob_of_appearing=p),
+            Pedestrian(-1, -1, prob_of_appearing=p)
+        ],
+        allowed_obstacle_appearance_columns=[{1}, {1}])
+    successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
+
+    if p < 1:
+        assert len(successors) == 3
+        assert successors[2] == ((2, 1, frozenset([('p', 0, 1, 0, 0)])),
+                                 p * (1 - p))
+        assert successors[0] == ((2, 1, frozenset()),
+                                 pytest.approx(1 - p - p * (1 - p)))
+    else:
+        assert len(successors) == 1
+    assert successors[int(p < 1) * 1] == ((2, 1, frozenset([('b', 0, 1, 0,
+                                                             0)])), p)
+    assert sum(prob for _, prob in successors) == pytest.approx(1)
+
+
+@pytest.mark.parametrize('p', [0.1 * i for i in range(1, 11)])
+def test_fast_obstacles(p):
+    s = Road(
+        headlight_range=3,
+        car=Car(2, 1),
+        obstacles=[Pedestrian(-1, -1, speed=4, prob_of_appearing=p)],
+        allowed_obstacle_appearance_columns=[{1}])
+    successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
+
+    if p < 1:
+        assert len(successors) == 5
+        assert successors[1] == ((2, 1, frozenset([('p', 0, 1, 4, 0)])),
+                                 (1 - p)**4 * p)
+        assert successors[4] == ((2, 1, frozenset([('p', 1, 1, 4, 0)])),
+                                 (1 - p)**3 * p)
+        assert successors[3] == ((2, 1, frozenset([('p', 2, 1, 4, 0)])),
+                                 (1 - p)**2 * p)
+        assert successors[2] == ((2, 1, frozenset([('p', 3, 1, 4, 0)])),
+                                 (1 - p)**1 * p)
+    else:
+        assert len(successors) == 1
+
     assert successors[0] == ((2, 1, frozenset()),
-                             pytest.approx(1 - 2 * p * (1 - p) - p * p))
+                             pytest.approx((1 - p)**5 + p))
+    assert sum(prob for _, prob in successors) == pytest.approx(1)

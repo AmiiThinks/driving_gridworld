@@ -75,6 +75,9 @@ class Road(object):
                     format(self._car.col))
             self._car.speed = 0
 
+        self._fastest_obstacle_speed = (max([o.speed for o in self._obstacles])
+                                        if len(obstacles) > 0 else 0)
+
     @property
     def car(self):
         return self._car
@@ -187,40 +190,82 @@ class Road(object):
             prob = 1.0
             next_obstacles = []
 
+            obstacle_reveal_below_counts = np.zeros(
+                [
+                    self.speed_limit() + self._fastest_obstacle_speed,
+                    self._num_lanes
+                ],
+                dtype=int)
+            obstacle_reveal_above_counts = np.zeros(
+                [
+                    self.speed_limit() + self._fastest_obstacle_speed,
+                    self._num_lanes
+                ],
+                dtype=int)
+            revealed_positions = set()
+            is_valid = True
+
             for i, obs in enumerate(self._obstacles):
                 obs_distance_rt_car = distance + obs.speed
 
                 if i in revealed:
-                    next_obstacle = obs.copy_at_position(*revealed[i])
+                    if revealed[i] in revealed_positions:
+                        is_valid = False
+                        break
+                    else:
+                        revealed_positions.add(revealed[i])
+                        next_obstacle = obs.copy_at_position(*revealed[i])
 
-                    num_skipped_rows = obs_distance_rt_car - next_obstacle.row - 1
-                    prob_not_appearing_closer = (
-                        (1.0 - obs.prob_of_appearing)**num_skipped_rows
-                    )  # yapf:disable
+                        num_skipped_rows = (
+                            obs_distance_rt_car - next_obstacle.row - 1 -
+                            obstacle_reveal_below_counts[revealed[i]])
+                        prob_not_appearing = 1.0 - obs.prob_of_appearing
+                        prob_not_appearing_closer = prob_not_appearing**num_skipped_rows
 
-                    prob_appearing_in_row = obs.prob_of_appearing * prob_not_appearing_closer
-                    prob *= prob_appearing_in_row / float(
-                        len(self._allowed_obstacle_appearance_columns[i]))
+                        prob_appearing_in_row = obs.prob_of_appearing * prob_not_appearing_closer
+
+                        num_rows_below_horizon = next_obstacle.row + 1
+
+                        num_possible_rows = sum([
+                            int(obstacle_reveal_above_counts[next_obstacle.row, col] < num_rows_below_horizon)
+                            for col in self._allowed_obstacle_appearance_columns[i]
+                        ])  # yapf:disable
+                        prob *= prob_appearing_in_row / float(
+                            num_possible_rows)
+
+                        obstacle_reveal_below_counts[:num_rows_below_horizon, next_obstacle.col] += 1  # yapf:disable
+                        obstacle_reveal_above_counts[next_obstacle.row:, next_obstacle.col] += 1  # yapf:disable
                 else:
                     next_obstacle = obs.next(distance)
 
-                    this_obstacle_could_appear = (
-                        obs_distance_rt_car > 0
-                        and self.obstacle_outside_car_path(obs))
-                    if this_obstacle_could_appear and obs.prob_of_appearing > 0:
+                    if (
+                        obs.prob_of_appearing > 0
+                        and (
+                            obs_distance_rt_car > 0
+                            and self.obstacle_outside_car_path(obs)
+                            and any([
+                                int(obstacle_reveal_above_counts[obs_distance_rt_car - 1, col] < obs_distance_rt_car)
+                                for col in self._allowed_obstacle_appearance_columns[i]
+                            ])
+                        )
+                    ):  # yapf:disable
                         prob *= (
                             (1.0 - obs.prob_of_appearing)**obs_distance_rt_car
                         )  # yapf:disable
+                if not (prob > 0):
+                    is_valid = False
+                    break
                 next_obstacles.append(next_obstacle)
 
-            next_road = self.__class__(
-                self._headlight_range,
-                next_car,
-                obstacles=next_obstacles,
-                allowed_obstacle_appearance_columns=(
-                    self._allowed_obstacle_appearance_columns),
-                allow_crashing=self.allow_crashing)
-            yield next_road, prob
+            if is_valid:
+                next_road = self.__class__(
+                    self._headlight_range,
+                    next_car,
+                    obstacles=next_obstacles,
+                    allowed_obstacle_appearance_columns=(
+                        self._allowed_obstacle_appearance_columns),
+                    allow_crashing=self.allow_crashing)
+                yield next_road, prob
 
     def is_in_a_ditch(self, o=None):
         if o is None: o = self._car
