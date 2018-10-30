@@ -499,3 +499,39 @@ def test_prob_of_moving_car_appearing():
     assert successors[1] == ((2, 1, frozenset([('p', 0, 1, 1, 0)])),
                              0.05 * (1 - 0.05))
     assert successors[2] == ((2, 1, frozenset([('p', 1, 1, 1, 0)])), 0.05)
+
+
+@pytest.mark.parametrize('p', [0.1 * i for i in range(1, 11)])
+def test_obstacle_appearance_prob(p):
+    s = Road(
+        headlight_range=3,
+        car=Car(2, 1),
+        obstacles=[Bump(-1, -1, prob_of_appearing=p)],
+        allowed_obstacle_appearance_columns=[{1}])
+    successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
+    assert len(successors) == 2
+
+    assert successors[0] == ((2, 1, frozenset()), 1.0 - p)
+    assert successors[1] == ((2, 1, frozenset([('b', 0, 1, 0, 0)])), p)
+
+    s = Road(
+        headlight_range=3,
+        car=Car(2, 1),
+        obstacles=[
+            Bump(-1, -1, prob_of_appearing=p),
+            Pedestrian(-1, -1, prob_of_appearing=p)
+        ],
+        allowed_obstacle_appearance_columns=[{1}, {2}])
+    successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
+    assert len(successors) == 4
+
+    assert successors[1] == ((2, 1, frozenset([('b', 0, 1, 0, 0)])),
+                             pytest.approx(p * (1 - p)))
+    assert successors[2] == ((2, 1, frozenset([('p', 0, 2, 0, 0)])),
+                             pytest.approx(p * (1 - p)))
+    assert successors[3] == ((2, 1,
+                              frozenset([('b', 0, 1, 0, 0), ('p', 0, 2, 0,
+                                                             0)])),
+                             pytest.approx(p * p))
+    assert successors[0] == ((2, 1, frozenset()),
+                             pytest.approx(1 - 2 * p * (1 - p) - p * p))
