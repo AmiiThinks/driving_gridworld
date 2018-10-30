@@ -145,7 +145,8 @@ class Road(object):
                     hidden_obstacles.append((i, spaces))
 
         for num_reveal in range(1, len(hidden_obstacles) + 1):
-            for allocation in combinations(range(len(hidden_obstacles)), num_reveal):
+            for allocation in combinations(
+                    range(len(hidden_obstacles)), num_reveal):
                 obstacles_to_reveal = [hidden_obstacles[i] for i in allocation]
                 range_of_spaces = [
                     range(len(spaces)) for _, spaces in obstacles_to_reveal
@@ -186,23 +187,30 @@ class Road(object):
             prob = 1.0
             next_obstacles = []
 
-            for i in range(len(self._obstacles)):
-                obs = self._obstacles[i]
-                p = self.prob_obstacle_appears(obs, distance)
+            for i, obs in enumerate(self._obstacles):
                 obs_distance_rt_car = distance + obs.speed
 
-                obs_is_revealed = i in revealed
-                if obs_is_revealed:
+                if i in revealed:
                     next_obstacle = obs.copy_at_position(*revealed[i])
-                    prob_not_appearing_closer = ((1.0 - p)**(
-                        obs_distance_rt_car - next_obstacle.row - 1))
 
-                    prob_appearing_in_row = p * prob_not_appearing_closer
+                    num_skipped_rows = obs_distance_rt_car - next_obstacle.row - 1
+                    prob_not_appearing_closer = (
+                        (1.0 - obs.prob_of_appearing)**num_skipped_rows
+                    )  # yapf:disable
+
+                    prob_appearing_in_row = obs.prob_of_appearing * prob_not_appearing_closer
                     prob *= prob_appearing_in_row / float(
                         len(self._allowed_obstacle_appearance_columns[i]))
                 else:
                     next_obstacle = obs.next(distance)
-                    prob *= (1.0 - p)**(obs_distance_rt_car)
+
+                    this_obstacle_could_appear = (
+                        obs_distance_rt_car > 0
+                        and self.obstacle_outside_car_path(obs))
+                    if this_obstacle_could_appear and obs.prob_of_appearing > 0:
+                        prob *= (
+                            (1.0 - obs.prob_of_appearing)**obs_distance_rt_car
+                        )  # yapf:disable
                 next_obstacles.append(next_obstacle)
 
             next_road = self.__class__(
