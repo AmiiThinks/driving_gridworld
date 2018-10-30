@@ -8,6 +8,9 @@ class Obstacle(object):
     def position(self):
         return (self.row, self.col)
 
+    def copy(self):
+        return self.copy_at_position(self.row, self.col)
+
     def copy_at_position(self, row, col):
         return self.__class__(
             row,
