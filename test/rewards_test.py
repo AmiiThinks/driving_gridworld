@@ -144,7 +144,7 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
     assert patient(sp, action, sp) == patient.critical_error_reward
 
 
-def test_two_samples_with_tf():
+def test_two_samples_with_tf_collision_offroad_constraint():
     tf.set_random_seed(42)
 
     patient = SituationalReward(
@@ -152,8 +152,25 @@ def test_two_samples_with_tf():
         stopping_reward=np.zeros([2]).astype('float32'),
         critical_error_reward=np.full([2], -1000.0).astype('float32'),
         bc_unobstructed_progress_reward=np.ones([2]).astype('float32'),
-        num_samples=2)
+        num_samples=2,
+        use_slow_collision_as_offroad_base=True)
     s = new_road(car_col=0)
     rewards = patient(s, NO_OP, s).numpy()
     assert rewards[0] == pytest.approx(-1.6178946)
     assert rewards[1] == pytest.approx(-10.368002)
+
+
+def test_two_samples_with_tf_no_collision_offroad_constraint():
+    tf.set_random_seed(42)
+
+    patient = SituationalReward(
+        wc_non_critical_error_reward=-np.ones([2]).astype('float32'),
+        stopping_reward=np.zeros([2]).astype('float32'),
+        critical_error_reward=np.full([2], -1000.0).astype('float32'),
+        bc_unobstructed_progress_reward=np.ones([2]).astype('float32'),
+        num_samples=2,
+        use_slow_collision_as_offroad_base=False)
+    s = new_road(car_col=0)
+    rewards = patient(s, NO_OP, s).numpy()
+    assert rewards[0] == pytest.approx(-1.4511681)
+    assert rewards[1] == pytest.approx(-6.4352355)

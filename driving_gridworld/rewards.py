@@ -14,19 +14,22 @@ class _SituationalReward(object):
                  stopping_reward=0,
                  critical_error_reward=-10.0,
                  bc_unobstructed_progress_reward=1.0,
-                 num_samples=1):
+                 num_samples=1,
+                 use_slow_collision_as_offroad_base=False):
         self.num_samples = num_samples
         self.wc_non_critical_error_reward = wc_non_critical_error_reward
         self.stopping_reward = stopping_reward
         self.critical_error_reward = critical_error_reward
         self.bc_unobstructed_progress_reward = bc_unobstructed_progress_reward
+        self.use_slow_collision_as_offroad_base = use_slow_collision_as_offroad_base
 
     def progress_bonus(self):
         return self.progress_bonus_below(self.bc_unobstructed_progress_reward)
 
     def offroad_bonus(self, speed):
         if speed < 1:
-            return self.collision_bonus(1)
+            return (self.collision_bonus(1)
+                    if self.use_slow_collision_as_offroad_base else 0)
         else:
             sub_bonus = self.offroad_bonus_above(
                 self.wc_non_critical_error_reward)
