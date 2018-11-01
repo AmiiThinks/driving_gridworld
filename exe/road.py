@@ -30,7 +30,8 @@ def main(headlight_range=3,
          num_steps=100,
          ui=False,
          recording_path=None,
-         discount=0.99):
+         discount=0.99,
+         allow_crashing=True):
     np.random.seed(42)
 
     headlight_range = int(headlight_range)
@@ -46,7 +47,7 @@ def main(headlight_range=3,
                 Pedestrian(-1, -1, speed=1, prob_of_appearing=0.13)
             ],
             allowed_obstacle_appearance_columns=[{2}, {1}],
-            allow_crashing=True)
+            allow_crashing=allow_crashing)
 
     speed_limit = headlight_range + 1
     wc_non_critical_error_reward = -1.0 / speed_limit

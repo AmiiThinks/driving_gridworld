@@ -197,7 +197,8 @@ class Road(object):
                 yield (next_road, 1.0)
                 return
             else:
-                next_car = self._car.next(NO_OP, self.speed_limit())
+                action = NO_OP
+                next_car = self._car.next(action, self.speed_limit())
         distance = self._car.progress_toward_destination(action)
 
         for revealed in self.every_combination_of_revealed_obstacles(distance):
