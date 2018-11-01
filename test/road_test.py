@@ -292,11 +292,11 @@ def test_car_has_crashed(col):
     assert patient.has_crashed()
     assert patient.has_crashed(Car(col, 1))
     assert not patient.has_crashed(Car(0, 1))
-    assert patient.to_key() == (col, 0, frozenset())
+    assert patient.to_key() == (-1, 0, frozenset())
 
     for action in ACTIONS:
         successors, probs = zip(*patient.successors(action))
-        assert [s.to_key() for s in successors] == [(col, 0, frozenset())]
+        assert [s.to_key() for s in successors] == [(-1, 0, frozenset())]
         assert sum(probs) == pytest.approx(1.0)
 
 
@@ -308,7 +308,7 @@ def test_crashing_into_left_wall():
     assert p == 1.0
     assert s.to_key() != patient.to_key()
     assert s.to_key() == (-1, 0, frozenset())
-    assert s.to_s() == '|d  d| \nCd  d| '
+    assert s.to_s() == ' ' * 7 + '\n' + ' ' * 7
 
 
 def test_crashing_into_right_wall():
@@ -318,8 +318,8 @@ def test_crashing_into_right_wall():
     s, p = successors[0]
     assert p == 1.0
     assert s.to_key() != patient.to_key()
-    assert s.to_key() == (4, 0, frozenset())
-    assert s.to_s() == '|d  d| \n|d  dC '
+    assert s.to_key() == (-1, 0, frozenset())
+    assert s.to_s() == ' ' * 7 + '\n' + ' ' * 7
 
 
 @pytest.mark.parametrize("speed", range(7))

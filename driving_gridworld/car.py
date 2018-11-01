@@ -6,6 +6,9 @@ class Car(object):
         self.col = col
         self.speed = speed
 
+    def copy(self):
+        return self.__class__(self.col, self.speed)
+
     def next(self, action, speed_limit):
         assert speed_limit > 0
 

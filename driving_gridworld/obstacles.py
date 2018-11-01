@@ -5,6 +5,11 @@ class Obstacle(object):
         self.prob_of_appearing = prob_of_appearing
         self.speed = speed
 
+    def __eq__(self, other):
+        return (self.row == other.row and self.col == other.col
+                and self.prob_of_appearing == other.prob_of_appearing
+                and self.speed == other.speed)
+
     def position(self):
         return (self.row, self.col)
 

@@ -84,6 +84,7 @@ def test_recording_gridworld_creation():
     assert patient.recorded() == []
     observation, reward, discount = patient.its_showtime()
     expected_recorded = [(patient.road.copy(), reward, discount)]
+
     assert patient.recorded() == expected_recorded
     observation, reward, discount = patient.play(0)
     expected_recorded.append((patient.road.copy(), reward, discount, 0))
@@ -145,7 +146,7 @@ def test_crashing_into_left_wall(method):
     assert discount == 0.0
     assert reward == 0.0
     assert patient.road.to_key() == (-1, 0, frozenset())
-    assert patient.road.to_s() == '|d  d| \nCd  d| '
+    assert patient.road.to_s() == ' ' * 7 + '\n' + ' ' * 7
 
 
 @pytest.mark.parametrize('method',
@@ -163,5 +164,5 @@ def test_crashing_into_right_wall(method):
     assert patient.game_over
     assert discount == 0.0
     assert reward == 0.0
-    assert patient.road.to_key() == (4, 0, frozenset())
-    assert patient.road.to_s() == '|d  d| \n|d  dC '
+    assert patient.road.to_key() == (-1, 0, frozenset())
+    assert patient.road.to_s() == ' ' * 7 + '\n' + ' ' * 7

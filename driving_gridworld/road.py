@@ -89,16 +89,21 @@ class Road(object):
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
                 and self._car == other._car
-                and self._obstacles == other._obstacles
                 and (self._allowed_obstacle_appearance_columns ==
                      other._allowed_obstacle_appearance_columns)
-                and (self.allow_crashing == other.allow_crashing))
+                and (self.allow_crashing == other.allow_crashing)
+                and len(self.obstacles) == len(other.obstacles) and all([
+                    other.obstacles[i] == o
+                    for i, o in enumerate(self.obstacles)
+                ]))
+
+    def __str__(self):
+        return self.to_s()
 
     def copy(self):
         return self.__class__(
             self._headlight_range,
-            self._car,
-            self._obstacles,
+            self._car, [o.copy() for o in self._obstacles],
             allowed_obstacle_appearance_columns=(
                 self._allowed_obstacle_appearance_columns),
             allow_crashing=self.allow_crashing)
@@ -178,13 +183,22 @@ class Road(object):
             yield v.state, v.prob
 
     def _successors(self, action):
-        distance = self._car.progress_toward_destination(action)
         next_car = self._car.next(action, self.speed_limit())
         if self.has_crashed(next_car):
             if self.allow_crashing:
                 next_car.speed = 0
+                next_road = self.__class__(
+                    self._headlight_range,
+                    next_car,
+                    obstacles=[o.copy() for o in self._obstacles],
+                    allowed_obstacle_appearance_columns=(
+                        self._allowed_obstacle_appearance_columns),
+                    allow_crashing=self.allow_crashing)
+                yield (next_road, 1.0)
+                return
             else:
                 next_car = self._car.next(NO_OP, self.speed_limit())
+        distance = self._car.progress_toward_destination(action)
 
         for revealed in self.every_combination_of_revealed_obstacles(distance):
             prob = 1.0
@@ -280,15 +294,18 @@ class Road(object):
         return car.col < 0 or car.col > self._max_lane_idx
 
     def to_key(self):
-        obstacles = []
-        dup_count = defaultdict(lambda: 0)
-        for o in self._obstacles:
-            if self.obstacle_is_visible(o):
-                k = (str(o), o.row, o.col, o.speed)
-                k_prime = k + (dup_count[k], )
-                dup_count[k] += 1
-                obstacles.append(k_prime)
-        return (self._car.col, self._car.speed, frozenset(obstacles))
+        if self.has_crashed():
+            return (-1, 0, frozenset())
+        else:
+            obstacles = []
+            dup_count = defaultdict(lambda: 0)
+            for o in self._obstacles:
+                if self.obstacle_is_visible(o):
+                    k = (str(o), o.row, o.col, o.speed)
+                    k_prime = k + (dup_count[k], )
+                    dup_count[k] += 1
+                    obstacles.append(k_prime)
+            return (self._car.col, self._car.speed, frozenset(obstacles))
 
     def to_s(self):
         s = np.concatenate(
@@ -369,15 +386,18 @@ class Road(object):
         return layers
 
     def board(self):
-        board = np.zeros([self._num_rows(), self._stage_width], dtype='uint8')
-        for c, layer in self.ordered_layers():
-            partial = np.multiply(_byte(c), layer, dtype='uint8')
-            is_present = partial > 0
-            board[is_present] = partial[is_present]
+        board = np.full(
+            [self._num_rows(), self._stage_width], _byte(' '), dtype='uint8')
+        if not self.has_crashed():
+            for c, layer in self.ordered_layers():
+                partial = np.multiply(_byte(c), layer, dtype='uint8')
+                is_present = partial > 0
+                board[is_present] = partial[is_present]
         return board
 
     def observation(self):
-        return Observation(self.board(), self.layers())
+        return Observation(self.board(), {}
+                           if self.has_crashed() else self.layers())
 
     def sample_transition(self, a):
         v = np.random.uniform()
