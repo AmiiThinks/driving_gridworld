@@ -599,3 +599,18 @@ def test_fast_obstacles(p):
     assert successors[0] == ((2, 1, frozenset()),
                              pytest.approx((1 - p)**5 + p))
     assert sum(prob for _, prob in successors) == pytest.approx(1)
+
+
+def test_single_terminal_state():
+    s = Road(
+        headlight_range=2,
+        car=Car(2, 0),
+        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.13)],
+        allowed_obstacle_appearance_columns=[{1}])
+    info, _ = s.safety_information()
+
+    '''s X a X s X measurement'''
+    info = np.array(info)
+    terminal_states, sp = np.where(info[:, NO_OP, :, 0] == 1)
+    assert np.all(terminal_states == sp)
+    assert len(terminal_states) == 1
