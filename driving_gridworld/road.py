@@ -459,7 +459,7 @@ class Road(object):
                 if len(reward_functions) > 1:
                     for k in range(len(reward_functions)):
                         rewards[s_i][j][k] = sum_r[k]
-                else:
+                elif len(reward_functions) > 0:
                     rewards[s_i][j] = sum_r[0]
 
             if print_every is not None and len(visited) % print_every == 0:
