@@ -24,7 +24,7 @@ COLOUR_BG = {}
 obs_to_rgb = ObservationToArray(COLOUR_FG)
 
 
-def observation_to_img(o):
+def observation_to_img(o, obs_to_rgb=obs_to_rgb):
     return np.swapaxes(obs_to_rgb(o) / 1000.0, 1, 2).T
 
 
