@@ -192,3 +192,22 @@ def critical_reward(speed_limit, gamma, progress_reward):
     if 0 <= gamma < 1:
         r /= (1.0 - gamma)
     return r - progress_reward
+
+
+class DebrisPerceptionReward(SituationalReward):
+    def __init__(self, *args, loc=0, precision=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.precision = precision
+        self.loc = loc
+
+    def collision_bonus(self, speed):
+        if self.precision is None:
+            return self.loc
+        else:
+            return tf.random_normal(self.loc, speed / self.precision)
+
+    def offroad_bonus_above(self, wc_bonus):
+        return wc_bonus
+
+    def progress_bonus_below(self, bc_bonus):
+        return bc_bonus
