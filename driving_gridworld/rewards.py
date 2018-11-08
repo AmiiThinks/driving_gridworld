@@ -181,3 +181,14 @@ class SampleAvgSituationalReward(SituationalReward):
 
     def offroad_bonus(self, speed):
         return tf.reduce_mean(super().offroad_bonus(speed))
+
+
+def ditch_reward(speed, progress_reward):
+    return -2 * progress_reward * speed
+
+
+def critical_reward(speed_limit, gamma, progress_reward):
+    r = -1 * progress_reward * (speed_limit + 1)
+    if 0 <= gamma < 1:
+        r /= (1.0 - gamma)
+    return r - progress_reward
