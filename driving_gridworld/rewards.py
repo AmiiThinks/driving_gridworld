@@ -213,7 +213,7 @@ class DebrisPerceptionReward(SituationalReward):
 
     def _collision_bonus(self, speed):
         if self.precision is None or np.isinf(self.precision):
-            return self.loc
+            return tf.squeeze(tf.fill([self.num_samples], self.loc))
         else:
             return tf.squeeze(
                 tf.random_normal(
