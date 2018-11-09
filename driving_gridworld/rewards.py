@@ -190,7 +190,7 @@ def fixed_ditch_bonus(speed, progress_bonus):
 def critical_reward_for_fixed_ditch_bonus(speed_limit,
                                           progress_bonus,
                                           discount=1.0):
-    r = -1 * progress_bonus * (speed_limit + 1)
+    r = -progress_bonus * (speed_limit + 1)
     if 0 <= discount < 1:
         r /= (1.0 - discount)
     return r - progress_bonus
