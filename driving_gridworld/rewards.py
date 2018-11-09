@@ -206,7 +206,11 @@ class DebrisPerceptionReward(SituationalReward):
         if self.precision is None or np.isinf(self.precision):
             return self.loc
         else:
-            return tf.random_normal(self.loc, tf.sqrt(speed / self.precision))
+            return tf.squeeze(
+                tf.random_normal(
+                    [self.num_samples],
+                    mean=self.loc,
+                    stddev=tf.sqrt(speed / self.precision)))
 
     def offroad_bonus_above(self, wc_bonus):
         return wc_bonus
