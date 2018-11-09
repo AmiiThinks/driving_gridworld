@@ -203,6 +203,15 @@ class DebrisPerceptionReward(SituationalReward):
         self.loc = loc
 
     def collision_bonus(self, speed):
+        if speed < 0:
+            return 0
+        else:
+            while len(self._collision_bonuses) <= speed:
+                self._collision_bonuses.append(
+                    self._collision_bonus(len(self._collision_bonuses)))
+            return self._collision_bonuses[speed]
+
+    def _collision_bonus(self, speed):
         if self.precision is None or np.isinf(self.precision):
             return self.loc
         else:
