@@ -183,14 +183,14 @@ class SampleAvgSituationalReward(SituationalReward):
         return tf.reduce_mean(super().offroad_bonus(speed))
 
 
-def fixed_ditch_bonus(speed, progress_bonus):
-    return -2 * progress_bonus * speed
+def fixed_ditch_bonus(progress_bonus, speed=1, multiplier=3):
+    return -multiplier * progress_bonus * speed
 
 
-def critical_reward_for_fixed_ditch_bonus(speed_limit,
-                                          progress_bonus,
+def critical_reward_for_fixed_ditch_bonus(progress_bonus,
+                                          speed_limit,
                                           discount=1.0):
-    r = -progress_bonus * (speed_limit + 1)
+    r = fixed_ditch_bonus(speed_limit, progress_bonus) * (speed_limit + 1)
     if 0 <= discount < 1:
         r /= (1.0 - discount)
     return r - progress_bonus
