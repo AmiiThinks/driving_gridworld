@@ -219,7 +219,7 @@ class DebrisPerceptionReward(SituationalReward):
                 tf.random_normal(
                     [self.num_samples],
                     mean=self.loc,
-                    stddev=tf.sqrt(speed / self.precision)))
+                    stddev=speed / tf.sqrt(self.precision)))
 
     def offroad_bonus_above(self, wc_bonus):
         return wc_bonus
