@@ -12,13 +12,13 @@ def color256_to_1000(c):
 
 
 COLOUR_FG = {
-    ' ': (color256_to_1000(183), color256_to_1000(177), color256_to_1000(174)),
-    '|': (color256_to_1000(67), color256_to_1000(70), color256_to_1000(75)),
-    'd': (color256_to_1000(87), color256_to_1000(59), color256_to_1000(12)),
+    ' ': (color256_to_1000(205), color256_to_1000(205), color256_to_1000(193)),
+    '|': (0, 0, 0),
+    'd': [color256_to_1000(c) for c in (102, 102, 0)],
     'C': (0, 999, 999),
-    'b': (color256_to_1000(83), color256_to_1000(77), color256_to_1000(74)),
+    'b': (color256_to_1000(128), color256_to_1000(0), color256_to_1000(128)),
     'p': (987, 623, 145),
-    '^': (100, 999, 100)
+    '^': [color256_to_1000(c) for c in (39, 232, 51)]
 }
 COLOUR_BG = {}
 obs_to_rgb = ObservationToArray(COLOUR_FG)
