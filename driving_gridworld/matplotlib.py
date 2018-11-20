@@ -1,8 +1,11 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from driving_gridworld.actions import ACTION_NAMES
 from driving_gridworld.rollout import Rollout
-from driving_gridworld.human_ui import observation_to_img
+from driving_gridworld.human_ui import observation_to_img, obs_to_rgb
+from driving_gridworld.obstacles import Bump, Pedestrian
+from driving_gridworld.actions import NO_OP
 
 
 class RewardInfo(object):
@@ -37,7 +40,8 @@ class RewardFunction(object):
         self.discount = discount
 
     def new_info(self):
-        return RewardInfo(self.name, self.string_format, discount=self.discount)
+        return RewardInfo(
+            self.name, self.string_format, discount=self.discount)
 
 
 class Bumps(RewardFunction):
@@ -106,58 +110,45 @@ def remove_labels_and_ticks(ax=None):
     return ax
 
 
-def add_decorations(ax=None):
+def add_decorations(img, ax=None):
     if ax is None:
         ax = plt.gca()
 
     incr = 0.55
     y = -0.60
     for i in range(2 * img.shape[0]):
-      ax.add_patch(
-          mpl.patches.Rectangle(
-              (2.47, y),
-              0.03,
-              0.33,
-              0,
-              color='yellow',
-              alpha=0.8
-          )
-      )
-      y += incr
+        ax.add_patch(
+            mpl.patches.Rectangle(
+                (2.47, y), 0.03, 0.33, 0, color='yellow', alpha=0.8))
+        y += incr
 
-    direction_offsets = np.array(
-        [(-0.5, -0.5), (0, -0.5 - 0.5 / 3), (0.5, -0.5)]
-    )
+    direction_offsets = np.array([(-0.5, -0.5), (0, -0.5 - 0.5 / 3), (0.5,
+                                                                      -0.5)])
     for i in range(img.shape[0] - 1):
-      ax.add_patch(
-          mpl.patches.Polygon(
-              np.array([6, i + 1]) + direction_offsets,
-              closed=True,
-              alpha=0.8,
-              facecolor='grey'
-          )
-      )
+        ax.add_patch(
+            mpl.patches.Polygon(
+                np.array([6, i + 1]) + direction_offsets,
+                closed=True,
+                alpha=0.8,
+                facecolor='grey'))
     return ax
 
 
 def new_plot_frame_with_text(img,
-                         action,
-                         *reward_info_list,
-                         fig=None,
-                         ax=None,
-                         animated=False,
-                         show_grid=False):
+                             action,
+                             *reward_info_list,
+                             fig=None,
+                             ax=None,
+                             animated=False,
+                             show_grid=False):
     num_text_columns = 5
     white_matrix = np.ones([img.shape[0], num_text_columns, img.shape[2]])
     extended_img = np.concatenate((img, white_matrix), axis=1)
 
     text_list = [ACTION_NAMES[action]]
     for info in reward_info_list:
-        text_list.append(
-            '{:8s} {:>5s} + {:>1s}'.format(
-                info.name, info.return_to_s(), info.reward_to_s()
-            )
-        )
+        text_list.append('{:8s} {:>5s} + {:>1s}'.format(
+            info.name, info.return_to_s(), info.reward_to_s()))
 
     if fig is None:
         fig = plt.figure()
@@ -176,15 +167,20 @@ def new_plot_frame_with_text(img,
         0,
         text_list[0],
         horizontalalignment='left',
-        fontproperties=font
-    )
+        fontproperties=font)
     ax_texts = [
         action_text,
-        ax.text(column, 3, '\n\n'.join(text_list[1:]), horizontalalignment='left', fontproperties=font)
+        ax.text(
+            column,
+            3,
+            '\n\n'.join(text_list[1:]),
+            horizontalalignment='left',
+            fontproperties=font)
     ]
     add_decorations(ax)
 
-    return ax.imshow(extended_img, animated=animated, aspect=1.5), ax_texts, fig, ax
+    return ax.imshow(
+        extended_img, animated=animated, aspect=1.5), ax_texts, fig, ax
 
 
 def plot_frame_with_text(img,
@@ -265,19 +261,14 @@ class Simulator(object):
         return self.prev_state, self.a, self.game.road
 
 
-def new_rollout(
-      *simulators,
-      reward_function_list=[],
-      num_steps=100,
-      fig=None,
-      ax_list=None
-):
+def new_rollout(*simulators,
+                reward_function_list=[],
+                num_steps=100,
+                fig=None,
+                ax_list=None):
     if fig is None or ax_list is None:
         fig, ax_list = plt.subplots(
-            len(simulators),
-            figsize=(3, 5),
-            squeeze=False
-        )
+            len(simulators), figsize=(3, 5), squeeze=False)
         ax_list = ax_list.reshape([len(simulators)])
 
     info_lists = []
