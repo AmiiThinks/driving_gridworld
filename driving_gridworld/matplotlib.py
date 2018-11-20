@@ -183,6 +183,29 @@ def new_plot_frame_with_text(img,
         extended_img, animated=animated, aspect=1.5), ax_texts, fig, ax
 
 
+def plot_frame_no_text(img,
+                      action,
+                      *reward_info_list,
+                      fig=None,
+                      ax=None,
+                      animated=False,
+                      show_grid=False):
+    num_text_columns = 5
+    white_matrix = np.ones([img.shape[0], num_text_columns, img.shape[2]])
+    extended_img = np.concatenate((img, white_matrix), axis=1)
+
+    if fig is None:
+        fig = plt.figure()
+
+    if ax is None:
+        ax = fig.add_subplot(111)
+
+    remove_labels_and_ticks(ax)
+    add_decorations(img, ax)
+
+    return ax.imshow(extended_img, animated=animated, aspect=1.8), [], fig, ax
+
+
 class Simulator(object):
     def __init__(self, policy, game):
         self.policy = policy
@@ -207,13 +230,14 @@ class Simulator(object):
 
 
 def new_rollout(*simulators,
+                plotting_function=plot_frame_no_text,
                 reward_function_list=[],
                 num_steps=100,
                 fig=None,
                 ax_list=None):
     if fig is None or ax_list is None:
         fig, ax_list = plt.subplots(
-            len(simulators), figsize=(3, 5), squeeze=False)
+            len(simulators), figsize=(5, 7), squeeze=False)
         ax_list = ax_list.reshape([len(simulators)])
 
     info_lists = []
@@ -222,7 +246,7 @@ def new_rollout(*simulators,
         observation, d = sim.start()
         img = observation_to_img(observation, obs_to_rgb)
         info_lists.append([f.new_info() for f in reward_function_list])
-        frame, ax_texts = plot_frame_with_text(
+        frame, ax_texts = plotting_function(
             img, sim.a, *info_lists[i], fig=fig, ax=ax_list[i])[:2]
 
         frames[0] += [frame] + ax_texts
@@ -237,7 +261,7 @@ def new_rollout(*simulators,
             for j, info in enumerate(info_lists[i]):
                 info.next(reward_function_list[j](*sim.sas()))
 
-            frame, ax_texts = plot_frame_with_text(
+            frame, ax_texts = plotting_function(
                 observation_to_img(observation, obs_to_rgb),
                 a,
                 *info_lists[i],
