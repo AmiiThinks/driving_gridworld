@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+import math
 from driving_gridworld.matplotlib import Simulator
 from driving_gridworld.matplotlib import Bumps
 from driving_gridworld.matplotlib import Crashes
@@ -13,6 +14,7 @@ from driving_gridworld.road import Road
 from driving_gridworld.car import Car
 from driving_gridworld.actions import NO_OP
 from driving_gridworld.obstacles import Pedestrian, Bump
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import rc
@@ -33,8 +35,8 @@ dir_name = my_path + '/../tmp'
 ensure_dir(dir_name)
 
 # Set up formatting for the movie files
-# Writer = animation.writers['ffmpeg']
-# writer = Writer(fps=15, metadata=dict(artist='Fatima Davelouis and Dustin Morill'), bitrate=1800)
+Writer = animation.writers['ffmpeg']
+
 
 def new_road(headlight_range=2):
     return Road(
@@ -49,9 +51,9 @@ def test_still_image_with_no_text():
     game = DrivingGridworld(new_road)
     observation = game.its_showtime()[0]
     img = observation_to_img(observation, obs_to_rgb)
-    fig, ax = plt.subplots(figsize=(3, 10))
+    fig, ax = plt.subplots(figsize=(6, 6))
     ax = add_decorations(img, remove_labels_and_ticks(ax))
-    ax.imshow(img, aspect=1.5)
+    ax.imshow(img, aspect=1.8)
     fig.savefig(dir_name + '/img_no_text.pdf')
 
 
@@ -59,17 +61,13 @@ def test_still_image_with_text():
     game = DrivingGridworld(new_road)
     observation = game.its_showtime()[0]
     img = observation_to_img(observation, obs_to_rgb)
+    fig, ax = plt.subplots(figsize=(6, 6))
+
     reward_function_list = [Progress(), Bumps(), Ditch(), Crashes()]
     info_lists = []
-    frames = [[]]
     info_lists.append([f.new_info() for f in reward_function_list])
-    fig, ax = plt.subplots(figsize=(3, 15))
     frame, ax_texts = new_plot_frame_with_text(
         img, 0, *info_lists[0], fig=fig, ax=ax)[:2]
-    frames[0] += [frame] + ax_texts
-
-    ax = add_decorations(img, remove_labels_and_ticks(ax))
-    ax.imshow(img, aspect=1.5)
     fig.savefig(dir_name + '/img_with_text.pdf')
 
 
@@ -82,7 +80,8 @@ def test_video_with_text():
                               Crashes()],
         num_steps=10)
     ani = animation.ArtistAnimation(fig, frames)
-    # ani.save(dir_name + '/video_with_text.mp4', writer=writer)
+    writer = Writer(fps=1, metadata=dict(title="video_with_text"))
+    ani.save(dir_name + '/video_with_text.mp4', writer=writer)
 
 
 def test_video_with_no_text():  # Should maybe pass the policy as an argument?
@@ -94,7 +93,16 @@ def test_video_with_no_text():  # Should maybe pass the policy as an argument?
                               Crashes()],
         num_steps=10)
     ani = animation.ArtistAnimation(fig, frames)
-    # ani.save(dir_name + '/video_no_text.mp4')
+    writer = Writer(fps=1, metadata=dict(title="video_no_text"))
+    ani.save(dir_name + '/video_no_text.mp4', writer=writer)
+
+
+def test_video_multiple_agents_with_text():
+    pass
+
+
+def test_video_multiple_agents_with_text():
+    pass
 
 
 if __name__ == '__main__':
@@ -102,3 +110,4 @@ if __name__ == '__main__':
     test_still_image_with_text()
     test_video_with_text()
     test_video_with_no_text()
+    

@@ -1,6 +1,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 from driving_gridworld.actions import ACTION_NAMES
 from driving_gridworld.rollout import Rollout
 from driving_gridworld.human_ui import observation_to_img, obs_to_rgb
@@ -141,6 +142,14 @@ def new_plot_frame_with_text(img,
                              ax=None,
                              animated=False,
                              show_grid=False):
+
+    if fig is None:
+        fig = plt.figure()
+
+    if ax is None:
+        ax = fig.add_subplot(111)
+
+    ax = add_decorations(img, remove_labels_and_ticks(ax))
     num_text_columns = 5
     white_matrix = np.ones([img.shape[0], num_text_columns, img.shape[2]])
     extended_img = np.concatenate((img, white_matrix), axis=1)
@@ -150,47 +159,30 @@ def new_plot_frame_with_text(img,
         text_list.append('{:8s} {:>5s} + {:>1s}'.format(
             info.name, info.return_to_s(), info.reward_to_s()))
 
-    if fig is None:
-        fig = plt.figure()
-
-    if ax is None:
-        ax = fig.add_subplot(111)
-
-    remove_labels_and_ticks(ax)
     column = img.shape[1] - 0.1
-
     font = mpl.font_manager.FontProperties()
     font.set_family('monospace')
-
-    action_text = ax.text(
-        column,
-        0,
-        text_list[0],
-        horizontalalignment='left',
-        fontproperties=font)
     ax_texts = [
-        action_text,
         ax.text(
             column,
-            3,
-            '\n\n'.join(text_list[1:]),
+            math.ceil(img.shape[0] / 2),
+            '\n\n'.join(text_list[0:]),
             horizontalalignment='left',
             fontproperties=font)
     ]
-    add_decorations(img, ax)
 
     return ax.imshow(
-        extended_img, animated=animated, aspect=1.5), ax_texts, fig, ax
+        extended_img, animated=animated, aspect=1.8), ax_texts, fig, ax
 
 
 def plot_frame_no_text(img,
-                      action,
-                      *reward_info_list,
-                      fig=None,
-                      ax=None,
-                      animated=False,
-                      show_grid=False):
-    num_text_columns = 5
+                       action,
+                       *reward_info_list,
+                       fig=None,
+                       ax=None,
+                       animated=False,
+                       show_grid=False):
+    num_text_columns = 0
     white_matrix = np.ones([img.shape[0], num_text_columns, img.shape[2]])
     extended_img = np.concatenate((img, white_matrix), axis=1)
 
@@ -206,29 +198,6 @@ def plot_frame_no_text(img,
     return ax.imshow(extended_img, animated=animated, aspect=1.8), [], fig, ax
 
 
-class Simulator(object):
-    def __init__(self, policy, game):
-        self.policy = policy
-        self.game = game
-
-    def start(self):
-        self.prev_state = self.game.road.copy()
-        self.observation, _, d = self.game.its_showtime()
-        self.a = NO_OP
-        self.d = 1
-        return self.observation, d
-
-    def step(self):
-        if self.d > 0:
-            self.prev_state = self.game.road.copy()
-            self.a = self.policy(self.game.road)
-            self.observation, _, self.d = self.game.play(self.a)
-        return self.a, self.observation, self.d
-
-    def sas(self):
-        return self.prev_state, self.a, self.game.road
-
-
 def new_rollout(*simulators,
                 plotting_function=plot_frame_no_text,
                 reward_function_list=[],
@@ -237,7 +206,7 @@ def new_rollout(*simulators,
                 ax_list=None):
     if fig is None or ax_list is None:
         fig, ax_list = plt.subplots(
-            len(simulators), figsize=(5, 7), squeeze=False)
+            len(simulators), figsize=(6, 6), squeeze=False)
         ax_list = ax_list.reshape([len(simulators)])
 
     info_lists = []
@@ -269,3 +238,26 @@ def new_rollout(*simulators,
                 ax=ax_list[i])[:2]
             frames[-1] += [frame] + ax_texts
     return frames, fig, ax_list, actions, info_lists
+
+
+class Simulator(object):
+    def __init__(self, policy, game):
+        self.policy = policy
+        self.game = game
+
+    def start(self):
+        self.prev_state = self.game.road.copy()
+        self.observation, _, d = self.game.its_showtime()
+        self.a = NO_OP
+        self.d = 1
+        return self.observation, d
+
+    def step(self):
+        if self.d > 0:
+            self.prev_state = self.game.road.copy()
+            self.a = self.policy(self.game.road)
+            self.observation, _, self.d = self.game.play(self.a)
+        return self.a, self.observation, self.d
+
+    def sas(self):
+        return self.prev_state, self.a, self.game.road
