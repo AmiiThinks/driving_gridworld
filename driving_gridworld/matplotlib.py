@@ -141,7 +141,8 @@ def new_plot_frame_with_text(img,
                              fig=None,
                              ax=None,
                              animated=False,
-                             show_grid=False):
+                             show_grid=False,
+                             vertical_shift=1.0):
 
     if fig is None:
         fig = plt.figure()
@@ -165,14 +166,14 @@ def new_plot_frame_with_text(img,
     ax_texts = [
         ax.text(
             column,
-            math.ceil(img.shape[0] / 2),
+            math.ceil(img.shape[0] // 2) + vertical_shift,
             '\n\n'.join(text_list[0:]),
             horizontalalignment='left',
             fontproperties=font)
     ]
 
     return ax.imshow(
-        extended_img, animated=animated, aspect=1.8), ax_texts, fig, ax
+        extended_img, animated=animated, aspect=1.5), ax_texts, fig, ax
 
 
 def plot_frame_no_text(img,
@@ -181,9 +182,9 @@ def plot_frame_no_text(img,
                        fig=None,
                        ax=None,
                        animated=False,
-                       show_grid=False):
-    num_text_columns = 0
-    white_matrix = np.ones([img.shape[0], num_text_columns, img.shape[2]])
+                       show_grid=False,
+                       vertical_shift=0.0):
+    white_matrix = np.ones([img.shape[0], 0, img.shape[2]])
     extended_img = np.concatenate((img, white_matrix), axis=1)
 
     if fig is None:
@@ -195,7 +196,7 @@ def plot_frame_no_text(img,
     remove_labels_and_ticks(ax)
     add_decorations(img, ax)
 
-    return ax.imshow(extended_img, animated=animated, aspect=1.8), [], fig, ax
+    return ax.imshow(extended_img, animated=animated, aspect=1.5), [], fig, ax
 
 
 def new_rollout(*simulators,
@@ -203,7 +204,9 @@ def new_rollout(*simulators,
                 reward_function_list=[],
                 num_steps=100,
                 fig=None,
-                ax_list=None):
+                ax_list=None,
+                vertical_shift=1.0):
+
     if fig is None or ax_list is None:
         fig, ax_list = plt.subplots(
             len(simulators), figsize=(6, 6), squeeze=False)
@@ -216,8 +219,12 @@ def new_rollout(*simulators,
         img = observation_to_img(observation, obs_to_rgb)
         info_lists.append([f.new_info() for f in reward_function_list])
         frame, ax_texts = plotting_function(
-            img, sim.a, *info_lists[i], fig=fig, ax=ax_list[i])[:2]
-
+            img,
+            sim.a,
+            *info_lists[i],
+            fig=fig,
+            ax=ax_list[i],
+            vertical_shift=vertical_shift)[:2]
         frames[0] += [frame] + ax_texts
 
     actions = [[] for _ in simulators]
@@ -235,9 +242,22 @@ def new_rollout(*simulators,
                 a,
                 *info_lists[i],
                 fig=fig,
-                ax=ax_list[i])[:2]
+                ax=ax_list[i],
+                vertical_shift=vertical_shift)[:2]
             frames[-1] += [frame] + ax_texts
     return frames, fig, ax_list, actions, info_lists
+
+
+def align_text_top_image(headlight_range):
+    output = [
+        1.25, 0.25, -0.75, -1.65, -2.5, -3.35
+    ]  # assuming we will only need to consider a headlight range <= 12, for our purposes
+    return output[math.ceil(headlight_range / 2) - 1]
+
+
+def make_rows_equal_spacing(headlight_range):
+    y = headlight_range + 5
+    return y
 
 
 class Simulator(object):

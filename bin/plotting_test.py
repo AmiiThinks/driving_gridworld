@@ -8,6 +8,7 @@ from driving_gridworld.matplotlib import Ditch
 from driving_gridworld.matplotlib import Progress
 from driving_gridworld.matplotlib import add_decorations, remove_labels_and_ticks
 from driving_gridworld.matplotlib import new_plot_frame_with_text, plot_frame_no_text, new_rollout
+from driving_gridworld.matplotlib import align_text_top_image, make_rows_equal_spacing
 from driving_gridworld.gridworld import DrivingGridworld
 from driving_gridworld.human_ui import observation_to_img, obs_to_rgb
 from driving_gridworld.road import Road
@@ -72,6 +73,12 @@ def test_still_image_with_text():
 
 
 def test_video_with_text():
+    hlr = new_road()._headlight_range
+    height_of_figure = make_rows_equal_spacing(hlr)
+    vertical_shift = align_text_top_image(hlr)
+    # fig, ax_list = plt.subplots(
+    #     1, figsize=(12, height_of_figure), squeeze=False)
+    # ax_list = ax_list.reshape([1])
     frames, fig, ax_list, actions, rollout_info_lists = new_rollout(
         Simulator(lambda x: NO_OP, DrivingGridworld(new_road)),
         plotting_function=new_plot_frame_with_text,
@@ -79,6 +86,7 @@ def test_video_with_text():
                               Bumps(), Ditch(),
                               Crashes()],
         num_steps=10)
+
     ani = animation.ArtistAnimation(fig, frames)
     writer = Writer(fps=1, metadata=dict(title="video_with_text"))
     ani.save(dir_name + '/video_with_text.mp4', writer=writer)
@@ -98,11 +106,66 @@ def test_video_with_no_text():  # Should maybe pass the policy as an argument?
 
 
 def test_video_multiple_agents_with_text():
-    pass
+    hlr = new_road()._headlight_range
+    height_of_figure = make_rows_equal_spacing(hlr)
+    vertical_shift = align_text_top_image(hlr)
+
+    simulators = [
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road)),
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road)),
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road)),
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road))
+    ]
+
+    fig, ax_list = plt.subplots(
+        2, len(simulators) // 2, figsize=(12, height_of_figure), squeeze=False)
+    ax_list = ax_list.reshape([len(simulators)])
+
+    frames, fig, ax_list, actions, rollout_info_lists = new_rollout(
+        *simulators,
+        plotting_function=new_plot_frame_with_text,
+        reward_function_list=[Progress(),
+                              Bumps(), Ditch(),
+                              Crashes()],
+        num_steps=10,
+        fig=fig,
+        ax_list=ax_list,
+        vertical_shift=vertical_shift)
+
+    ani = animation.ArtistAnimation(fig, frames)
+    writer = Writer(
+        fps=1, metadata=dict(title="video_multiple_agents_with_text"))
+    ani.save(dir_name + '/video_multiple_agents_with_text.mp4', writer=writer)
 
 
-def test_video_multiple_agents_with_text():
-    pass
+def test_video_multiple_agents_no_text():
+    hlr = new_road()._headlight_range
+    height_of_figure = make_rows_equal_spacing(hlr)
+    simulators = [
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road)),
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road)),
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road)),
+        Simulator(lambda x: NO_OP, DrivingGridworld(new_road))
+    ]
+
+    fig, ax_list = plt.subplots(
+        2, len(simulators) // 2, figsize=(12, height_of_figure), squeeze=False)
+    ax_list = ax_list.reshape([len(simulators)])
+
+    frames, fig, ax_list, actions, rollout_info_lists = new_rollout(
+        *simulators,
+        plotting_function=plot_frame_no_text,
+        reward_function_list=[Progress(),
+                              Bumps(), Ditch(),
+                              Crashes()],
+        num_steps=10,
+        fig=fig,
+        ax_list=ax_list)
+
+    ani = animation.ArtistAnimation(fig, frames)
+    writer = Writer(
+        fps=1, metadata=dict(title="video_multiple_agents_no_text"))
+    ani.save(dir_name + '/video_multiple_agents_no_text.mp4', writer=writer)
 
 
 if __name__ == '__main__':
@@ -110,4 +173,5 @@ if __name__ == '__main__':
     test_still_image_with_text()
     test_video_with_text()
     test_video_with_no_text()
-    
+    test_video_multiple_agents_with_text()
+    test_video_multiple_agents_no_text()
