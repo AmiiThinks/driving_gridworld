@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-tf.enable_eager_execution()
 from driving_gridworld.rewards import \
     SituationalReward, \
     WcSituationalReward, \
