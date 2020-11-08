@@ -144,7 +144,7 @@ def test_crashing_into_a_wall(columns, new_reward_function, action):
 
 
 def test_two_samples_with_tf_collision_offroad_constraint():
-    tf.set_random_seed(42)
+    tf.random.set_seed(42)
 
     patient = SituationalReward(
         wc_non_critical_error_reward=-np.ones([2]).astype('float32'),
@@ -160,7 +160,7 @@ def test_two_samples_with_tf_collision_offroad_constraint():
 
 
 def test_two_samples_with_tf_no_collision_offroad_constraint():
-    tf.set_random_seed(42)
+    tf.random.set_seed(42)
 
     patient = SituationalReward(
         wc_non_critical_error_reward=-np.ones([2]).astype('float32'),

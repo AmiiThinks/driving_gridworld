@@ -9,7 +9,8 @@ setup(
         'future >= 0.15.2',
         'setuptools >= 20.2.2',
         'fire',
-        'pycolab'
+        'pycolab',
+        'tensorflow >= 2', 
     ],
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],

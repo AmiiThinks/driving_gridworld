@@ -80,7 +80,7 @@ class _SituationalReward(object):
 
     def progress_bonus_below(self, bc_bonus):
         return tf.squeeze(
-            tf.random_uniform([self.num_samples], minval=0, maxval=bc_bonus))
+            tf.random.uniform([self.num_samples], minval=0, maxval=bc_bonus))
 
     def offroad_bonus_above(self, wc_bonus):
         return self.obstruction_bonus_above(wc_bonus)
@@ -90,7 +90,7 @@ class _SituationalReward(object):
 
     def obstruction_bonus_above(self, wc_bonus):
         return tf.squeeze(
-            tf.random_uniform([self.num_samples], minval=wc_bonus, maxval=0))
+            tf.random.uniform([self.num_samples], minval=wc_bonus, maxval=0))
 
 
 class SituationalReward(_SituationalReward):

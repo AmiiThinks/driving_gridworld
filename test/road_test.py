@@ -585,13 +585,13 @@ def test_fast_obstacles(p):
 
     if p < 1:
         assert len(successors) == 5
-        assert successors[1] == ((2, 1, frozenset([('p', 0, 1, 4, 0)])),
+        assert successors[3] == ((2, 1, frozenset([('p', 0, 1, 4, 0)])),
                                  (1 - p)**4 * p)
-        assert successors[4] == ((2, 1, frozenset([('p', 1, 1, 4, 0)])),
+        assert successors[2] == ((2, 1, frozenset([('p', 1, 1, 4, 0)])),
                                  (1 - p)**3 * p)
-        assert successors[3] == ((2, 1, frozenset([('p', 2, 1, 4, 0)])),
+        assert successors[1] == ((2, 1, frozenset([('p', 2, 1, 4, 0)])),
                                  (1 - p)**2 * p)
-        assert successors[2] == ((2, 1, frozenset([('p', 3, 1, 4, 0)])),
+        assert successors[4] == ((2, 1, frozenset([('p', 3, 1, 4, 0)])),
                                  (1 - p)**1 * p)
     else:
         assert len(successors) == 1
