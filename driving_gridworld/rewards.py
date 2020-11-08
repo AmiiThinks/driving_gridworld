@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import tensorflow as tf
 from itertools import product
@@ -16,6 +17,9 @@ class _SituationalReward(object):
                  bc_unobstructed_progress_reward=1.0,
                  num_samples=1,
                  use_slow_collision_as_offroad_base=False):
+        warnings.warn(
+            f'Classes derived from _SituationalReward like {self.__class__} are deprecated.',
+            DeprecationWarning)
         self.num_samples = num_samples
         self.wc_non_critical_error_reward = wc_non_critical_error_reward
         self.stopping_reward = stopping_reward
