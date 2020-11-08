@@ -75,10 +75,11 @@ class _SituationalReward(object):
                 return [obs.speed] if isinstance(obs, Bump) else None
 
         try:
-            return self.reward(distance, s.car.speed, car_always_on_pavement,
-                               *s.count_obstacle_collisions(
-                                   s_prime, check_for_bump_collision,
-                                   check_for_pedestrian_collision)[0])
+            return self.reward(
+                distance, s.car.speed, car_always_on_pavement,
+                *s.count_obstacle_collisions(
+                    s_prime, check_for_bump_collision,
+                    check_for_pedestrian_collision)[0])
         except PedestrianHit:
             return self.critical_error_reward
 
@@ -220,10 +221,9 @@ class DebrisPerceptionReward(SituationalReward):
             return tf.squeeze(tf.fill([self.num_samples], self.loc))
         else:
             return tf.squeeze(
-                tf.random_normal(
-                    [self.num_samples],
-                    mean=self.loc,
-                    stddev=speed / tf.sqrt(self.precision)))
+                tf.random.normal([self.num_samples],
+                                 mean=self.loc,
+                                 stddev=speed / tf.sqrt(self.precision)))
 
     def offroad_bonus_above(self, wc_bonus):
         return wc_bonus
