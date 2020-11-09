@@ -16,17 +16,16 @@ def check_for_pedestrian_collision(obs):
 def reward(s, a, s_prime):
     if s.has_crashed() or s_prime.has_crashed():
         return -4 * s.speed_limit()
-    distance = s.car.progress_toward_destination(a)
 
     def check_for_bump_collision(obs=None):
         if obs is None:
             return []
         else:
             return [2 * (obs.speed + 1) *
-                    distance] if isinstance(obs, Bump) else None
+                    s.car.speed] if isinstance(obs, Bump) else None
 
     try:
-        r = distance
+        r = s.car.progress_toward_destination(a)
         collision_obstacle_speeds = s.count_obstacle_collisions(
             s_prime, check_for_bump_collision,
             check_for_pedestrian_collision)[0]
