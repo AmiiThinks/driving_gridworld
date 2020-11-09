@@ -17,7 +17,7 @@ import pickle
 from driving_gridworld.road import Road
 from driving_gridworld.car import Car
 from driving_gridworld.obstacles import Pedestrian, Bump
-from driving_gridworld.rewards import ComponentAvgSituationalReward
+import driving_gridworld.rewards
 
 
 def save(data, path):
@@ -30,7 +30,7 @@ def main(headlight_range=3,
          ui=False,
          recording_path=None,
          discount=0.99,
-         allow_crashing=True):
+         allow_crashing=False):
     np.random.seed(42)
 
     headlight_range = int(headlight_range)
@@ -38,43 +38,31 @@ def main(headlight_range=3,
     ui = bool(ui)
 
     def new_road():
-        return Road(
-            headlight_range,
-            Car(2, 0),
-            obstacles=[
-                Bump(-1, -1, prob_of_appearing=0.16),
-                Pedestrian(-1, -1, speed=1, prob_of_appearing=0.13)
-            ],
-            allowed_obstacle_appearance_columns=[{2}, {1}],
-            allow_crashing=allow_crashing)
+        return Road(headlight_range,
+                    Car(2, 0),
+                    obstacles=[
+                        Bump(-1, -1, prob_of_appearing=1.0),
+                    ],
+                    allowed_obstacle_appearance_columns=[{0, 1}],
+                    allow_crashing=allow_crashing)
 
-    speed_limit = headlight_range + 1
-    wc_non_critical_error_reward = -1.0 / speed_limit
-
-    reward_function = ComponentAvgSituationalReward(
-        wc_non_critical_error_reward=wc_non_critical_error_reward,
-        stopping_reward=0,
-        critical_error_reward=((speed_limit * speed_limit + speed_limit) *
-                               wc_non_critical_error_reward - 1000.0),
-        bc_unobstructed_progress_reward=1.0 / speed_limit)
+    reward_function = driving_gridworld.rewards.reward
 
     if ui:
         from driving_gridworld.human_ui import UiRecordingDrivingGridworld
 
-        game = UiRecordingDrivingGridworld(
-            new_road,
-            discount=discount,
-            reward_function=lambda s, a, sp: tf.convert_to_tensor(reward_function(s, a, sp)).numpy()
-        )
+        game = UiRecordingDrivingGridworld(new_road,
+                                           discount=discount,
+                                           reward_function=lambda s, a, sp: np.
+                                           array(reward_function(s, a, sp)))
         game.ui_play()
     else:
         from driving_gridworld.gridworld import RecordingDrivingGridworld
 
-        game = RecordingDrivingGridworld(
-            new_road,
-            discount=discount,
-            reward_function=lambda s, a, sp: tf.convert_to_tensor(reward_function(s, a, sp)).numpy()
-        )
+        game = RecordingDrivingGridworld(new_road,
+                                         discount=discount,
+                                         reward_function=lambda s, a, sp: np.
+                                         array(reward_function(s, a, sp)))
 
         observation, _, __ = game.its_showtime()
 
