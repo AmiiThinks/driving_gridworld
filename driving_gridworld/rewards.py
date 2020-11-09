@@ -9,6 +9,35 @@ class PedestrianHit(RuntimeError):
     pass
 
 
+def check_for_pedestrian_collision(obs):
+    if isinstance(obs, Pedestrian): raise PedestrianHit()
+
+
+def reward(s, a, s_prime):
+    if s.has_crashed() or s_prime.has_crashed():
+        return -4 * s.speed_limit()
+    distance = s.car.progress_toward_destination(a)
+
+    def check_for_bump_collision(obs=None):
+        if obs is None:
+            return []
+        else:
+            return [2 * (obs.speed + 1) *
+                    distance] if isinstance(obs, Bump) else None
+
+    try:
+        r = distance
+        collision_obstacle_speeds = s.count_obstacle_collisions(
+            s_prime, check_for_bump_collision,
+            check_for_pedestrian_collision)[0]
+        r -= sum(collision_obstacle_speeds)
+        if s.is_in_a_ditch() or s_prime.is_in_a_ditch():
+            r -= 2 * s.car.speed
+        return r
+    except PedestrianHit:
+        return -4 * s.speed_limit()
+
+
 class _SituationalReward(object):
     def __init__(self,
                  wc_non_critical_error_reward=-1.0,
