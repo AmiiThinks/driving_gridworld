@@ -10,6 +10,14 @@ def _byte(c, encoding='ascii'):
     return bytes(c, encoding)[0]
 
 
+def _call_or_zero(v):
+    try:
+        value = v()
+        return 0 if value is None else value
+    except:
+        return 0
+
+
 class Successor(object):
     def __init__(self, state=None, prob=0.0):
         self.state = state
@@ -17,6 +25,24 @@ class Successor(object):
 
 
 class Road(object):
+    '''
+    A gridworld that acts like a two lane road.
+    
+    One column on each side represents ditches.
+    The rows are counted in graphics ordering ((0, 0) is top-left).
+    The car is always on `car_row` at the bottom of the gridworld.
+    The car always moves as many spaces as its speed.
+    ACCELERATE and BREAK actions change the car's speed one unit
+    on the next frame.
+    LEFT and RIGHT move the car one space to the left or right,
+    respectively.
+    CRUISE is a no-op.
+
+    Obstacles appear on the road as if they were past the headlight range
+    on the previous frame.
+    Obstacles are recycled when they are unobservable (the car has driven
+    past them or they are not a valid column).
+    '''
     # Drivable road definitions
     _paved_lanes = np.array([1, 2])
     _ditch_lanes = np.array([0, 3])
@@ -71,8 +97,8 @@ class Road(object):
         if self.has_crashed():
             if not self.allow_crashing:
                 raise ValueError(
-                    'Car has crashed into column {} even though crashing should not be allowed.'.
-                    format(self._car.col))
+                    'Car has crashed into column {} even though crashing should not be allowed.'
+                    .format(self._car.col))
             self._car.speed = 0
 
         self._fastest_obstacle_speed = (max([o.speed for o in self._obstacles])
@@ -89,8 +115,8 @@ class Road(object):
     def __eq__(self, other):
         return (self._headlight_range == other._headlight_range
                 and self._car == other._car
-                and (self._allowed_obstacle_appearance_columns ==
-                     other._allowed_obstacle_appearance_columns)
+                and (self._allowed_obstacle_appearance_columns
+                     == other._allowed_obstacle_appearance_columns)
                 and (self.allow_crashing == other.allow_crashing)
                 and len(self.obstacles) == len(other.obstacles) and all([
                     other.obstacles[i] == o
@@ -101,12 +127,11 @@ class Road(object):
         return self.to_s()
 
     def copy(self):
-        return self.__class__(
-            self._headlight_range,
-            self._car, [o.copy() for o in self._obstacles],
-            allowed_obstacle_appearance_columns=(
-                self._allowed_obstacle_appearance_columns),
-            allow_crashing=self.allow_crashing)
+        return self.__class__(self._headlight_range,
+                              self._car, [o.copy() for o in self._obstacles],
+                              allowed_obstacle_appearance_columns=(
+                                  self._allowed_obstacle_appearance_columns),
+                              allow_crashing=self.allow_crashing)
 
     def car_row(self):
         return self._headlight_range
@@ -128,7 +153,7 @@ class Road(object):
         '''
         return self._headlight_range + 1
 
-    def obstacle_outside_car_path(self, obstacle):
+    def obstacle_is_unobservable(self, obstacle):
         return (obstacle.col < 0 or obstacle.col >= self._num_lanes
                 or obstacle.row > self._headlight_range)
 
@@ -143,7 +168,7 @@ class Road(object):
 
         hidden_obstacles = []
         for i, o in enumerate(self._obstacles):
-            if o.prob_of_appearing > 0 and self.obstacle_outside_car_path(o):
+            if o.prob_of_appearing > 0 and self.obstacle_is_unobservable(o):
                 spaces = [
                     (row, col)
                     for row, col in self.available_spaces(distance + o.speed)
@@ -153,8 +178,8 @@ class Road(object):
                     hidden_obstacles.append((i, spaces))
 
         for num_reveal in range(1, len(hidden_obstacles) + 1):
-            for allocation in combinations(
-                    range(len(hidden_obstacles)), num_reveal):
+            for allocation in combinations(range(len(hidden_obstacles)),
+                                           num_reveal):
                 obstacles_to_reveal = [hidden_obstacles[i] for i in allocation]
                 range_of_spaces = [
                     range(len(spaces)) for _, spaces in obstacles_to_reveal
@@ -205,18 +230,16 @@ class Road(object):
             prob = 1.0
             next_obstacles = []
 
-            obstacle_reveal_below_counts = np.zeros(
-                [
-                    self.speed_limit() + self._fastest_obstacle_speed,
-                    self._num_lanes
-                ],
-                dtype=int)
-            obstacle_reveal_above_counts = np.zeros(
-                [
-                    self.speed_limit() + self._fastest_obstacle_speed,
-                    self._num_lanes
-                ],
-                dtype=int)
+            obstacle_reveal_below_counts = np.zeros([
+                self.speed_limit() + self._fastest_obstacle_speed,
+                self._num_lanes
+            ],
+                                                    dtype=int)
+            obstacle_reveal_above_counts = np.zeros([
+                self.speed_limit() + self._fastest_obstacle_speed,
+                self._num_lanes
+            ],
+                                                    dtype=int)
             revealed_positions = set()
             is_valid = True
 
@@ -257,7 +280,7 @@ class Road(object):
                         obs.prob_of_appearing > 0
                         and (
                             obs_distance_rt_car > 0
-                            and self.obstacle_outside_car_path(obs)
+                            and self.obstacle_is_unobservable(obs)
                             and any([
                                 int(obstacle_reveal_above_counts[obs_distance_rt_car - 1, col] < obs_distance_rt_car)
                                 for col in self._allowed_obstacle_appearance_columns[i]
@@ -309,17 +332,16 @@ class Road(object):
             return (self._car.col, self._car.speed, frozenset(obstacles))
 
     def to_s(self):
-        s = np.concatenate(
-            [
-                self.board(),
-                np.full([self._num_rows(), 1], _byte('\n'), dtype='uint8')
-            ],
-            axis=1).tostring().decode('ascii')
+        s = np.concatenate([
+            self.board(),
+            np.full([self._num_rows(), 1], _byte('\n'), dtype='uint8')
+        ],
+                           axis=1).tostring().decode('ascii')
         return s[:-1]
 
     def prob_obstacle_appears(self, obstacle, distance):
         this_obstacle_could_appear = ((distance + obstacle.speed) > 0 and
-                                      self.obstacle_outside_car_path(obstacle))
+                                      self.obstacle_is_unobservable(obstacle))
         return int(this_obstacle_could_appear) * obstacle.prob_of_appearing
 
     def car_layer(self):
@@ -369,16 +391,13 @@ class Road(object):
         return layers
 
     def ordered_layers(self):
-        layers = (
-            [
-                (' ', np.full([self._num_rows(), self._stage_width], False)),
-                ('|', self.wall_layer()),
-                ('d', self.ditch_layer()),
-                ('^', self.speedometer_layer())
-            ]
-            + list(self.obstacle_layers().items())
-        )  # yapf:disable
-        layers.append((str(self._car), self.car_layer()))
+        layers = [
+            (' ', np.full([self._num_rows(), self._stage_width], False)),
+            ('|', self.wall_layer()),
+            ('d', self.ditch_layer()),
+            ('^', self.speedometer_layer()),
+            (str(self._car), self.car_layer()),
+        ] + list(self.obstacle_layers().items())
 
         for i in range(1, len(layers)):
             np.logical_or(layers[0][1], layers[i][1], out=layers[0][1])
@@ -387,8 +406,9 @@ class Road(object):
         return layers
 
     def board(self):
-        board = np.full(
-            [self._num_rows(), self._stage_width], _byte(' '), dtype='uint8')
+        board = np.full([self._num_rows(), self._stage_width],
+                        _byte(' '),
+                        dtype='uint8')
         if not self.has_crashed():
             for c, layer in self.ordered_layers():
                 partial = np.multiply(_byte(c), layer, dtype='uint8')
@@ -397,8 +417,8 @@ class Road(object):
         return board
 
     def observation(self):
-        return Observation(self.board(), {}
-                           if self.has_crashed() else self.layers())
+        return Observation(self.board(),
+                           {} if self.has_crashed() else self.layers())
 
     def sample_transition(self, a):
         v = np.random.uniform()
@@ -409,7 +429,7 @@ class Road(object):
         return s
 
     def obstacle_is_visible(self, obs):
-        return not self.obstacle_outside_car_path(obs) and obs.row >= 0
+        return not self.obstacle_is_unobservable(obs) and obs.row >= 0
 
     class IndexMap(UserDict):
         def __getitem__(self, item):
@@ -463,8 +483,8 @@ class Road(object):
                     rewards[s_i][j] = sum_r[0]
 
             if print_every is not None and len(visited) % print_every == 0:
-                print('{} / {} visited'.format(
-                    len(visited), len(to_be_visited)))
+                print('{} / {} visited'.format(len(visited),
+                                               len(to_be_visited)))
 
         for i in range(len(state_indices)):
             for j in range(len(ACTIONS)):
@@ -474,32 +494,37 @@ class Road(object):
         return transitions, rewards, state_indices
 
     def count_obstacle_collisions(self, s_prime, *value_for_obs):
-        def call_or_zero(v):
-            try:
-                return v()
-            except:
-                return 0
+        '''
+        Returns the cumulative value of colliding with each obstacle.
 
-        counts = [call_or_zero(v) for v in value_for_obs]
+        Returns one value for each value function in value_for_obs.
+        
+        To collide with an obstacle, the obstacle must start in a 
+        position that is not the same as the car's and cross paths
+        with one of the potential paths the car could take.
 
-        min_col = min(self.car.col, s_prime.car.col)
-        max_col = max(self.car.col, s_prime.car.col)
-
-        def obstacle_in_column_range(obs):
-            return min_col <= obs_prime.col <= max_col
-
-        def car_could_collide_with_obstacle(obs, obs_prime):
-            return (not (obs.row == self.car_row() and obs.col == self.car.col)
-                    and obstacle_in_column_range(obs_prime)
-                    and max(obs.row, 0) <= self.car_row() <= obs_prime.row)
+        Parameters:
+        - s_prime: The next road state.
+        - value_for_obs: A list of value functions.
+            Each value function must return a value that implements
+            the '+' operator given an obstacle.
+            None is replaced with 0.
+        '''
+        counts = [_call_or_zero(v) for v in value_for_obs]
 
         for obs, obs_prime in zip(self.obstacles, s_prime.obstacles):
-            if car_could_collide_with_obstacle(obs, obs_prime):
+            car_has_collided = (
+                # The car has driven up to or past the obstacle's row
+                obs_prime.row >= self.car_row()
+                # Obstacle did not start in the same position as the car
+                and (obs.row != self.car_row() or obs.col != self.car.col)
+                # Obstacle is in a column where a collision could have occurred
+                and min(self.car.col, s_prime.car.col) <= obs_prime.col <= max(
+                    self.car.col, s_prime.car.col))
+            if car_has_collided:
                 for i, v in enumerate(value_for_obs):
                     value = v(obs)
-                    if value is not None:
-                        counts[i] += value
-                        break
+                    counts[i] += 0 if value is None else value
         return counts
 
     def safety_information(self):
@@ -545,9 +570,9 @@ class Road(object):
                     s_prime_i = state_indices[s_prime_key]
 
                     collision_counts = s.count_obstacle_collisions(
-                        s_prime,
-                        lambda obs: 1 if isinstance(obs, Pedestrian) else None,
-                        lambda obs: 1 if isinstance(obs, Bump) else None)
+                        s_prime, lambda obs: 1
+                        if isinstance(obs, Pedestrian) else 0, lambda obs: 1
+                        if isinstance(obs, Bump) else 0)
 
                     sas_info = [int(s_prime.has_crashed())] + collision_counts
                     sas_info += [

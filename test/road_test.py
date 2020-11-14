@@ -5,7 +5,7 @@ from driving_gridworld.obstacles import Bump
 from driving_gridworld.obstacles import Pedestrian
 from driving_gridworld.car import Car
 from driving_gridworld.actions import ACTIONS, RIGHT, LEFT, UP, DOWN, NO_OP
-from driving_gridworld.rewards import WcSituationalReward
+import driving_gridworld.rewards as dg_rewards
 import pytest
 
 
@@ -62,8 +62,8 @@ def test_number_of_successors_invisible_obstacle_and_variable_speeds(
     headlight_range = 2
     road_test = Road(headlight_range, Car(1, speed), [obst])
     probs = [prob for next_state, prob in road_test.successors(action)]
-    assert (len(probs) ==
-            4 * max(0, speed - int(action == LEFT or action == RIGHT)) + 1)
+    assert (len(probs) == 4 *
+            max(0, speed - int(action == LEFT or action == RIGHT)) + 1)
 
 
 def test_car_can_only_overdrive_headlights_by_one_unit():
@@ -190,11 +190,11 @@ def test_layers():
     np.testing.assert_array_equal(patient['^'], x_speedometer_layer)
 
     x_empty_layer = np.logical_not(
-        np.logical_or(x_speedometer_layer,
-                      np.logical_or(
-                          x_ditch_layer,
-                          np.logical_or(
-                              np.logical_or(x_bump_layer, x_pedestrian_layer),
+        np.logical_or(
+            x_speedometer_layer,
+            np.logical_or(
+                x_ditch_layer,
+                np.logical_or(np.logical_or(x_bump_layer, x_pedestrian_layer),
                               np.logical_or(x_car_layer, x_wall_layer)))))
     np.testing.assert_array_equal(patient[' '], x_empty_layer)
 
@@ -213,8 +213,9 @@ def test_board():
 
     assert patient.dtype == 'uint8'
 
-    x_board = np.full(
-        [headlight_range + 1, Road._stage_width], _byte(' '), dtype='uint8')
+    x_board = np.full([headlight_range + 1, Road._stage_width],
+                      _byte(' '),
+                      dtype='uint8')
 
     x_board[:, 0] = _byte('|')
     x_board[:, -2] = _byte('|')
@@ -324,17 +325,17 @@ def test_crashing_into_right_wall():
 
 @pytest.mark.parametrize("speed", range(7))
 def test_successor_probabilities(speed):
-    state = Road(
-        headlight_range=6, car=Car(1, speed), obstacles=[Bump(-1, -1)])
+    state = Road(headlight_range=6,
+                 car=Car(1, speed),
+                 obstacles=[Bump(-1, -1)])
     probs = [p for (s, p) in state.successors(UP)]
     assert sum(probs) == pytest.approx(1.0)
 
 
 def test_probabilities_error():
-    state = Road(
-        headlight_range=3,
-        car=Car(1, 1),
-        obstacles=[Bump(-1, -1), Bump(-1, -1)])
+    state = Road(headlight_range=3,
+                 car=Car(1, 1),
+                 obstacles=[Bump(-1, -1), Bump(-1, -1)])
     probs = [p for (s, p) in state.successors(NO_OP)]
     assert sum(probs) == pytest.approx(1.0)
 
@@ -347,13 +348,12 @@ def test_successor_function_with_identical_states(p):
     expected_probs = [
         pytest.approx(prob) for prob in expected_probs if prob > 0
     ]
-    state = Road(
-        headlight_range=3,
-        car=Car(1, 1),
-        obstacles=[
-            Bump(-1, -1, prob_of_appearing=p),
-            Bump(-1, -1, prob_of_appearing=p)
-        ])
+    state = Road(headlight_range=3,
+                 car=Car(1, 1),
+                 obstacles=[
+                     Bump(-1, -1, prob_of_appearing=p),
+                     Bump(-1, -1, prob_of_appearing=p)
+                 ])
     probs = [p for (s, p) in state.successors(NO_OP)]
     assert sum(probs) == pytest.approx(1.0)
     assert probs == expected_probs
@@ -361,9 +361,7 @@ def test_successor_function_with_identical_states(p):
 
 def test_tabulate_single_reward():
     patient = Road(headlight_range=1, car=Car(2, 0), obstacles=[Bump(-1, -1)])
-    transitions, rewards, state_indices = patient.tabulate(
-        WcSituationalReward(
-            wc_non_critical_error_reward=-1.0, stopping_reward=0.0))
+    transitions, rewards, state_indices = patient.tabulate(dg_rewards.reward)
 
     transitions = np.array(transitions)
     rewards = np.array(rewards)
@@ -383,10 +381,7 @@ def test_tabulate_single_reward():
 def test_tabulate_multiple_reward():
     patient = Road(headlight_range=1, car=Car(2, 0), obstacles=[Bump(-1, -1)])
     transitions, rewards, state_indices = patient.tabulate(
-        WcSituationalReward(
-            wc_non_critical_error_reward=-1.0, stopping_reward=0.0),
-        WcSituationalReward(
-            wc_non_critical_error_reward=-2.0, stopping_reward=0.0))
+        dg_rewards.reward, dg_rewards.reward)
 
     transitions = np.array(transitions)
     rewards = np.array(rewards)
@@ -425,7 +420,7 @@ def test_simple_collision():
     s_p = Road(headlight_range=hr, car=car, obstacles=[Bump(hr, 2)])
 
     num_collisions = s.count_obstacle_collisions(
-        s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+        s_p, lambda obs: int(isinstance(obs, Bump))).pop()
     assert num_collisions == 1
 
 
@@ -436,7 +431,7 @@ def test_no_collision_if_obstacle_is_removed_from_the_road():
     s = Road(headlight_range=hr, car=car, obstacles=[Bump(hr, 2)])
 
     num_collisions = s.count_obstacle_collisions(
-        s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+        s_p, lambda obs: int(isinstance(obs, Bump))).pop()
     assert num_collisions == 0
 
 
@@ -446,7 +441,7 @@ def test_no_collision_if_obstacle_is_under_car():
     s = Road(headlight_range=hr, car=car, obstacles=[Bump(hr, 2)])
     s_p = Road(headlight_range=hr, car=car, obstacles=[Bump(hr + 1, 2)])
     num_collisions = s.count_obstacle_collisions(
-        s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+        s_p, lambda obs: int(isinstance(obs, Bump))).pop()
     assert num_collisions == 0
 
 
@@ -455,20 +450,32 @@ def test_collision_if_car_changes_lanes_into_obstacle():
     s = Road(headlight_range=hr, car=Car(2, 1), obstacles=[Bump(hr, 1)])
     s_p = Road(headlight_range=hr, car=Car(1, 1), obstacles=[Bump(hr, 1)])
     num_collisions = s.count_obstacle_collisions(
-        s_p, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+        s_p, lambda obs: int(isinstance(obs, Bump))).pop()
     assert num_collisions == 1
 
     num_collisions = s_p.count_obstacle_collisions(
-        s, lambda obs: 1 if isinstance(obs, Bump) else None).pop()
+        s, lambda obs: int(isinstance(obs, Bump))).pop()
+    assert num_collisions == 0
+
+
+def test_collision_if_car_drives_at_full_speed():
+    hr = 3
+    s = Road(headlight_range=hr, car=Car(2, hr), obstacles=[Bump(hr + 1, 2)])
+    s_p = Road(headlight_range=hr, car=Car(2, hr), obstacles=[Bump(hr, 2)])
+    num_collisions = s.count_obstacle_collisions(
+        s_p, lambda obs: int(isinstance(obs, Bump))).pop()
+    assert num_collisions == 1
+
+    num_collisions = s_p.count_obstacle_collisions(
+        s, lambda obs: int(isinstance(obs, Bump))).pop()
     assert num_collisions == 0
 
 
 def test_moving_car_appears_when_stopped():
-    s = Road(
-        headlight_range=3,
-        car=Car(2, 0),
-        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.5)],
-        allowed_obstacle_appearance_columns=[{1}])
+    s = Road(headlight_range=3,
+             car=Car(2, 0),
+             obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.5)],
+             allowed_obstacle_appearance_columns=[{1}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
     assert len(successors) == 2
     assert successors[0] == ((2, 0, frozenset()), 0.5)
@@ -481,21 +488,19 @@ def test_available_spaces():
 
 
 def test_prob_of_moving_car_appearing():
-    s = Road(
-        headlight_range=3,
-        car=Car(2, 0),
-        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.05)],
-        allowed_obstacle_appearance_columns=[{1}])
+    s = Road(headlight_range=3,
+             car=Car(2, 0),
+             obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.05)],
+             allowed_obstacle_appearance_columns=[{1}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
     assert len(successors) == 2
     assert successors[0] == ((2, 0, frozenset()), 0.95)
     assert successors[1] == ((2, 0, frozenset([('p', 0, 1, 1, 0)])), 0.05)
 
-    s = Road(
-        headlight_range=3,
-        car=Car(2, 1),
-        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.05)],
-        allowed_obstacle_appearance_columns=[{1}])
+    s = Road(headlight_range=3,
+             car=Car(2, 1),
+             obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.05)],
+             allowed_obstacle_appearance_columns=[{1}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
     assert len(successors) == 3
     assert successors[0] == ((2, 1, frozenset()),
@@ -507,11 +512,10 @@ def test_prob_of_moving_car_appearing():
 
 @pytest.mark.parametrize('p', [0.1 * i for i in range(1, 11)])
 def test_obstacle_appearance_prob(p):
-    s = Road(
-        headlight_range=3,
-        car=Car(2, 1),
-        obstacles=[Bump(-1, -1, prob_of_appearing=p)],
-        allowed_obstacle_appearance_columns=[{1}])
+    s = Road(headlight_range=3,
+             car=Car(2, 1),
+             obstacles=[Bump(-1, -1, prob_of_appearing=p)],
+             allowed_obstacle_appearance_columns=[{1}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
 
     if p < 1:
@@ -519,17 +523,16 @@ def test_obstacle_appearance_prob(p):
         assert successors[0] == ((2, 1, frozenset()), 1.0 - p)
     else:
         assert len(successors) == 1
-    assert successors[int(p < 1) * 1] == ((2, 1, frozenset([('b', 0, 1, 0,
-                                                             0)])), p)
+    assert successors[int(p < 1) * 1] == ((2, 1, frozenset([('b', 0, 1, 0, 0)
+                                                            ])), p)
 
-    s = Road(
-        headlight_range=3,
-        car=Car(2, 1),
-        obstacles=[
-            Bump(-1, -1, prob_of_appearing=p),
-            Pedestrian(-1, -1, prob_of_appearing=p)
-        ],
-        allowed_obstacle_appearance_columns=[{1}, {2}])
+    s = Road(headlight_range=3,
+             car=Car(2, 1),
+             obstacles=[
+                 Bump(-1, -1, prob_of_appearing=p),
+                 Pedestrian(-1, -1, prob_of_appearing=p)
+             ],
+             allowed_obstacle_appearance_columns=[{1}, {2}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
 
     if p < 1:
@@ -551,14 +554,13 @@ def test_obstacle_appearance_prob(p):
 
 @pytest.mark.parametrize('p', [0.1 * i for i in range(1, 11)])
 def test_obstacles_cannot_appear_in_the_same_position(p):
-    s = Road(
-        headlight_range=3,
-        car=Car(2, 1),
-        obstacles=[
-            Bump(-1, -1, prob_of_appearing=p),
-            Pedestrian(-1, -1, prob_of_appearing=p)
-        ],
-        allowed_obstacle_appearance_columns=[{1}, {1}])
+    s = Road(headlight_range=3,
+             car=Car(2, 1),
+             obstacles=[
+                 Bump(-1, -1, prob_of_appearing=p),
+                 Pedestrian(-1, -1, prob_of_appearing=p)
+             ],
+             allowed_obstacle_appearance_columns=[{1}, {1}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
 
     if p < 1:
@@ -569,18 +571,17 @@ def test_obstacles_cannot_appear_in_the_same_position(p):
                                  pytest.approx(1 - p - p * (1 - p)))
     else:
         assert len(successors) == 1
-    assert successors[int(p < 1) * 1] == ((2, 1, frozenset([('b', 0, 1, 0,
-                                                             0)])), p)
+    assert successors[int(p < 1) * 1] == ((2, 1, frozenset([('b', 0, 1, 0, 0)
+                                                            ])), p)
     assert sum(prob for _, prob in successors) == pytest.approx(1)
 
 
 @pytest.mark.parametrize('p', [0.1 * i for i in range(1, 11)])
 def test_fast_obstacles(p):
-    s = Road(
-        headlight_range=3,
-        car=Car(2, 1),
-        obstacles=[Pedestrian(-1, -1, speed=4, prob_of_appearing=p)],
-        allowed_obstacle_appearance_columns=[{1}])
+    s = Road(headlight_range=3,
+             car=Car(2, 1),
+             obstacles=[Pedestrian(-1, -1, speed=4, prob_of_appearing=p)],
+             allowed_obstacle_appearance_columns=[{1}])
     successors = [(sp.to_key(), prob) for sp, prob in s.successors(NO_OP)]
 
     if p < 1:
@@ -602,13 +603,11 @@ def test_fast_obstacles(p):
 
 
 def test_single_terminal_state():
-    s = Road(
-        headlight_range=2,
-        car=Car(2, 0),
-        obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.13)],
-        allowed_obstacle_appearance_columns=[{1}])
+    s = Road(headlight_range=2,
+             car=Car(2, 0),
+             obstacles=[Pedestrian(-1, -1, speed=1, prob_of_appearing=0.13)],
+             allowed_obstacle_appearance_columns=[{1}])
     info, _ = s.safety_information()
-
     '''s X a X s X measurement'''
     info = np.array(info)
     terminal_states, sp = np.where(info[:, NO_OP, :, 0] == 1)
