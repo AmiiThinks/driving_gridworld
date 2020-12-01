@@ -31,7 +31,8 @@ def reward(s, a, s_prime):
 
     try:
         r = s.car.progress_toward_destination(a)
-        r -= 2 * (s.car.speed if s_prime.is_in_a_ditch() else r)
+        if s_prime.is_in_a_ditch():
+            r -= 2 * s.car.speed
         r -= s.count_obstacle_collisions(s_prime, check_for_bump_collision,
                                          check_for_pedestrian_collision)[0]
         return r
