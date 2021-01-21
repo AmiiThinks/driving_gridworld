@@ -16,8 +16,8 @@ def reward(s, a, s_prime):
     '''
     Simple default reward function.
 
-    +1 for every space travelled forward, -2 for every space travelled 
-    off-road, and -2 times the speed of the car relative to a Bump.  
+    +1 for every space travelled forward, -2 for every space travelled
+    off-road, and -2 times the speed of the car relative to a Bump.
     Crashing into the barriers or a Pedestrian is a catastrophic condition
     that receives -4 times the speed limit as if the car hit a bump in the
     ditch at full speed but didn't make any forward progress.
@@ -31,7 +31,7 @@ def reward(s, a, s_prime):
 
     try:
         r = s.car.progress_toward_destination(a)
-        if s_prime.is_in_a_ditch():
+        if s_prime.is_in_a_ditch() or s.is_in_a_ditch():
             r -= 2 * s.car.speed
         r -= s.count_obstacle_collisions(s_prime, check_for_bump_collision,
                                          check_for_pedestrian_collision)[0]
