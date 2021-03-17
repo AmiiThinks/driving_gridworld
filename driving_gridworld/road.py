@@ -27,7 +27,7 @@ class Successor(object):
 class Road(object):
     '''
     A gridworld that acts like a two lane road.
-    
+
     One column on each side represents ditches.
     The rows are counted in graphics ordering ((0, 0) is top-left).
     The car is always on `car_row` at the bottom of the gridworld.
@@ -43,41 +43,45 @@ class Road(object):
     Obstacles are recycled when they are unobservable (the car has driven
     past them or they are not a valid column).
     '''
-    # Drivable road definitions
-    _paved_lanes = np.array([1, 2])
-    _ditch_lanes = np.array([0, 3])
-    _num_paved_lanes = len(_paved_lanes)
-    _num_ditch_lanes = len(_ditch_lanes)
-    _num_lanes = _num_paved_lanes + _num_ditch_lanes
-    _max_lane_idx = _num_lanes - 1
-
-    # Stage definitions
+    # Constants
     _stage_offset = 1
-    _wall_columns = np.array([0, _num_lanes + _stage_offset])
-    _num_wall_columns = len(_wall_columns)
     _num_speedometer_columns = 1
     _speedometer_col_idx = -1
-    _stage_width = _num_lanes + _num_wall_columns + _num_speedometer_columns
 
-    reward_for_being_in_transit = -1
+    # Drivable road definitions
+    def _init_lanes(self, paved_lanes, ditch_lanes):
+        self._paved_lanes = paved_lanes
+        self._ditch_lanes = ditch_lanes
+        self._num_paved_lanes = len(self._paved_lanes)
+        self._num_ditch_lanes = len(self._ditch_lanes)
+        self._num_lanes = self._num_paved_lanes + self._num_ditch_lanes
+        self._max_lane_idx = self._num_lanes - 1
 
-    # Cache
-    _available_spaces_given_distance = {}
+        # Stage definitions
+        self._wall_columns = np.array(
+            [0, self._num_lanes + self._stage_offset])
+        self._num_wall_columns = len(self._wall_columns)
 
-    @classmethod
-    def available_spaces(cls, distance):
-        if distance not in cls._available_spaces_given_distance:
-            cls._available_spaces_given_distance[distance] = set(
-                product(range(distance), range(cls._num_lanes)))
-        return cls._available_spaces_given_distance[distance]
+        self._stage_width = self._num_lanes + self._num_wall_columns + self._num_speedometer_columns
+
+    def available_spaces(self, distance):
+        if distance not in self._available_spaces_given_distance:
+            self._available_spaces_given_distance[distance] = set(
+                product(range(distance), range(self._num_lanes)))
+        return self._available_spaces_given_distance[distance]
 
     def __init__(self,
                  headlight_range,
                  car,
                  obstacles=[],
                  allowed_obstacle_appearance_columns=None,
-                 allow_crashing=True):
+                 allow_crashing=True,
+                 paved_lanes=np.array([1, 2]),
+                 ditch_lanes=np.array([0, 3])):
+        self._init_lanes(paved_lanes, ditch_lanes)
         self._headlight_range = headlight_range
+        # Cache
+        self._available_spaces_given_distance = {}
 
         if self.speed_limit() < car.speed:
             raise ValueError(
@@ -104,6 +108,25 @@ class Road(object):
         self._fastest_obstacle_speed = (max([o.speed for o in self._obstacles])
                                         if len(obstacles) > 0 else 0)
 
+        def copy(headlight_range=self._headlight_range,
+                 car=self._car,
+                 obstacles=self._obstacles,
+                 allowed_obstacle_appearance_columns=self.
+                 _allowed_obstacle_appearance_columns,
+                 allow_crashing=self.allow_crashing,
+                 paved_lanes=self._paved_lanes,
+                 ditch_lanes=self._ditch_lanes):
+            return self.__class__(headlight_range,
+                                  car,
+                                  obstacles,
+                                  allowed_obstacle_appearance_columns=
+                                  allowed_obstacle_appearance_columns,
+                                  allow_crashing=allow_crashing,
+                                  paved_lanes=paved_lanes,
+                                  ditch_lanes=ditch_lanes)
+
+        self.copy = copy
+
     @property
     def car(self):
         return self._car
@@ -121,17 +144,11 @@ class Road(object):
                 and len(self.obstacles) == len(other.obstacles) and all([
                     other.obstacles[i] == o
                     for i, o in enumerate(self.obstacles)
-                ]))
+                ]) and (self._paved_lanes == other._paved_lanes).all()
+                and (self._ditch_lanes == other._ditch_lanes).all())
 
     def __str__(self):
         return self.to_s()
-
-    def copy(self):
-        return self.__class__(self._headlight_range,
-                              self._car, [o.copy() for o in self._obstacles],
-                              allowed_obstacle_appearance_columns=(
-                                  self._allowed_obstacle_appearance_columns),
-                              allow_crashing=self.allow_crashing)
 
     def car_row(self):
         return self._headlight_range
@@ -212,13 +229,9 @@ class Road(object):
         if self.has_crashed(next_car):
             if self.allow_crashing:
                 next_car.speed = 0
-                next_road = self.__class__(
-                    self._headlight_range,
-                    next_car,
-                    obstacles=[o.copy() for o in self._obstacles],
-                    allowed_obstacle_appearance_columns=(
-                        self._allowed_obstacle_appearance_columns),
-                    allow_crashing=self.allow_crashing)
+                next_road = self.copy(
+                    car=next_car,
+                    obstacles=[o.copy() for o in self._obstacles])
                 yield (next_road, 1.0)
                 return
             else:
@@ -296,22 +309,19 @@ class Road(object):
                 next_obstacles.append(next_obstacle)
 
             if is_valid:
-                next_road = self.__class__(
-                    self._headlight_range,
-                    next_car,
-                    obstacles=next_obstacles,
-                    allowed_obstacle_appearance_columns=(
-                        self._allowed_obstacle_appearance_columns),
-                    allow_crashing=self.allow_crashing)
+                next_road = self.copy(car=next_car, obstacles=next_obstacles)
                 yield next_road, prob
 
     def is_in_a_ditch(self, o=None):
         if o is None: o = self._car
-        return o.col == 0 or o.col == self._max_lane_idx
+        for l in self._ditch_lanes:
+            if o.col == l:
+                return True
+        return False
 
     def is_off_road(self, o=None):
         if o is None: o = self._car
-        return o.col <= 0 or o.col >= self._max_lane_idx
+        return self.is_in_a_ditch(o) or self.has_crashed(o)
 
     def has_crashed(self, car=None):
         if car is None: car = self._car
@@ -498,8 +508,8 @@ class Road(object):
         Returns the cumulative value of colliding with each obstacle.
 
         Returns one value for each value function in value_for_obs.
-        
-        To collide with an obstacle, the obstacle must start in a 
+
+        To collide with an obstacle, the obstacle must start in a
         position that is not the same as the car's and cross paths
         with one of the potential paths the car could take.
 
@@ -592,3 +602,15 @@ class Road(object):
                 while len(info[i][j]) < len(state_indices):
                     info[i][j].append([0.0] * 7)
         return info, state_indices
+
+
+def LaneAndDitchRoad(*args, **kwargs):
+    '''
+    Returns a gridworld that acts like a one lane road.
+
+    Pavement on the left in column zero and ditch on the right in column one.
+    '''
+    return Road(*args,
+                **kwargs,
+                paved_lanes=np.array([0]),
+                ditch_lanes=np.array([1]))

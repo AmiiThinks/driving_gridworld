@@ -8,13 +8,12 @@ Keys: left, right - move. up, down - speed up or down, respectively. q - quit.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import tensorflow as tf
 
 import fire
 import numpy as np
 import pickle
 
-from driving_gridworld.road import Road
+import driving_gridworld.road as dg_road
 from driving_gridworld.car import Car
 from driving_gridworld.obstacles import Pedestrian, Bump
 import driving_gridworld.rewards
@@ -30,21 +29,34 @@ def main(headlight_range=3,
          ui=False,
          recording_path=None,
          discount=0.99,
-         allow_crashing=False):
-    np.random.seed(42)
+         allow_crashing=False,
+         one_way=False,
+         random_seed=42):
+    np.random.seed(random_seed)
 
     headlight_range = int(headlight_range)
     num_steps = int(num_steps)
     ui = bool(ui)
+    one_way = bool(one_way)
 
     def new_road():
-        return Road(headlight_range,
-                    Car(2, 0),
-                    obstacles=[
-                        Bump(-1, -1, prob_of_appearing=1.0),
-                    ],
-                    allowed_obstacle_appearance_columns=[{0, 1}],
-                    allow_crashing=allow_crashing)
+        if one_way:
+            return dg_road.LaneAndDitchRoad(
+                headlight_range,
+                Car(0, 0),
+                obstacles=[
+                    Bump(-1, -1, prob_of_appearing=1.0),
+                ],
+                allowed_obstacle_appearance_columns=[{0, 1}],
+                allow_crashing=allow_crashing)
+        else:
+            return dg_road.Road(headlight_range,
+                                Car(2, 0),
+                                obstacles=[
+                                    Bump(-1, -1, prob_of_appearing=1.0),
+                                ],
+                                allowed_obstacle_appearance_columns=[{0, 1}],
+                                allow_crashing=allow_crashing)
 
     reward_function = driving_gridworld.rewards.reward
 

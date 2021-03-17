@@ -208,12 +208,12 @@ def test_board():
     pedestrians = [Pedestrian(-1, -1), Pedestrian(0, 1), Pedestrian(1, 2)]
     headlight_range = 4
     speed = 1
-    patient = Road(headlight_range, Car(1, speed=speed),
-                   bumps + pedestrians).board()
+    road = Road(headlight_range, Car(1, speed=speed), bumps + pedestrians)
+    patient = road.board()
 
     assert patient.dtype == 'uint8'
 
-    x_board = np.full([headlight_range + 1, Road._stage_width],
+    x_board = np.full([headlight_range + 1, road._stage_width],
                       _byte(' '),
                       dtype='uint8')
 
